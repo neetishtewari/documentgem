@@ -19,11 +19,13 @@ async def chat_with_document(document_id: str, query: str = Body(..., embed=True
 
         # 2. Search for relevant document chunks (Blocking DB call -> Thread Pool)
         def search_db():
+            filter_id = document_id if document_id != "all" else None
+            
             return supabase.rpc("match_documents", {
                 "query_embedding": query_embedding,
                 "match_threshold": 0.1, # Lowered from 0.5
                 "match_count": 5,
-                "filter_document_id": document_id
+                "filter_document_id": filter_id
             }).execute()
             
         res = await run_in_threadpool(search_db)
