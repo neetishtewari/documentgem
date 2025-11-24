@@ -1,16 +1,14 @@
-from fastapi import APIRouter, UploadFile, File, HTTPException, BackgroundTasks
+from fastapi import APIRouter, UploadFile, File, HTTPException, BackgroundTasks, Depends
 from fastapi.concurrency import run_in_threadpool
 from app.core.config import settings
-from supabase import create_client, Client
+from app.services.supabase import supabase
+from app.dependencies.auth import get_current_user
 import uuid
 import os
 import shutil
 from app.services.ai_service import classify_document, generate_embedding, chunk_text
 
 router = APIRouter()
-
-# Initialize Supabase client
-supabase: Client = create_client(settings.SUPABASE_URL, settings.SUPABASE_KEY)
 
 async def process_document_ai(document_id: str, file_content: bytes, file_type: str):
     """
@@ -33,8 +31,6 @@ async def process_document_ai(document_id: str, file_content: bytes, file_type: 
         print(f"Document {document_id} classified as {result.get('category')}")
 
         # 2. Generate Embeddings for RAG
-        # We need to extract text again (or return it from classify_document to be efficient)
-        # For now, let's re-extract to keep it simple,        # 2. Generate Embeddings for RAG
         import io
         from pypdf import PdfReader
         
@@ -57,11 +53,24 @@ async def process_document_ai(document_id: str, file_content: bytes, file_type: 
                 embedding = await generate_embedding(chunk)
                 if embedding:
                     # Blocking DB insert -> Thread Pool
+                    # Note: We don't need user_id here as it's already on the document
+                    # and RLS policies (if using service role) will allow it.
+                    # If using anon key, we might need to be careful, but for now assuming service role or permissive RLS for backend.
                     def insert_embedding():
+                        # We need to fetch the user_id from the document first if we want to be explicit,
+                        # but the migration added a default auth.uid(). 
+                        # Since this is a background task, auth.uid() might be null.
+                        # Ideally, we should fetch the document's user_id and insert it.
+                        
+                        # Fetch doc to get user_id
+                        doc = supabase.table("documents").select("user_id").eq("id", document_id).single().execute()
+                        user_id = doc.data.get("user_id")
+
                         supabase.table("document_embeddings").insert({
                             "document_id": document_id,
                             "content": chunk,
-                            "embedding": embedding
+                            "embedding": embedding,
+                            "user_id": user_id 
                         }).execute()
                     await run_in_threadpool(insert_embedding)
                     print(f"Inserted embedding for chunk {i+1}/{len(chunks)}")
@@ -74,11 +83,15 @@ async def process_document_ai(document_id: str, file_content: bytes, file_type: 
         print(f"Background AI Task Error: {e}")
 
 @router.post("/upload")
-async def upload_document(background_tasks: BackgroundTasks, file: UploadFile = File(...)):
+async def upload_document(
+    background_tasks: BackgroundTasks, 
+    file: UploadFile = File(...),
+    user = Depends(get_current_user)
+):
     try:
         # 1. Upload file to Supabase Storage
         file_ext = file.filename.split(".")[-1]
-        file_path = f"{uuid.uuid4()}.{file_ext}"
+        file_path = f"{user.id}/{uuid.uuid4()}.{file_ext}" # Organize by user_id
         file_content = await file.read()
         
         # Upload to 'documents' bucket (Blocking -> Thread Pool)
@@ -97,7 +110,8 @@ async def upload_document(background_tasks: BackgroundTasks, file: UploadFile = 
             "file_path": file_path,
             "type": file.content_type,
             "size": len(file_content),
-            "category": "Processing..." # Initial state
+            "category": "Processing...", # Initial state
+            "user_id": user.id
         }
         
         # Blocking DB insert -> Thread Pool
@@ -119,15 +133,10 @@ async def upload_document(background_tasks: BackgroundTasks, file: UploadFile = 
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/stats")
-def get_stats():
+def get_stats(user = Depends(get_current_user)):
     try:
-        # Get counts by category
-        # Supabase doesn't support "group by" easily via the JS/Python client builder in a single call 
-        # without using .rpc() or raw SQL. 
-        # For simplicity/speed in this prototype, we'll fetch all categories and count in Python 
-        # (efficient enough for <1000 docs). For prod, use .rpc().
-        
-        response = supabase.table("documents").select("category").execute()
+        # Get counts by category for the current user
+        response = supabase.table("documents").select("category").eq("user_id", user.id).execute()
         categories = [doc['category'] for doc in response.data]
         
         from collections import Counter
@@ -141,10 +150,10 @@ def get_stats():
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/")
-def get_documents(category: str = None):
+def get_documents(category: str = None, user = Depends(get_current_user)):
     # Changed to sync def so FastAPI runs it in a thread pool automatically
     try:
-        query = supabase.table("documents").select("*").order("created_at", desc=True)
+        query = supabase.table("documents").select("*").eq("user_id", user.id).order("created_at", desc=True)
         
         if category and category != "All":
             query = query.eq("category", category)

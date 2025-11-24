@@ -1,16 +1,20 @@
-from fastapi import APIRouter, HTTPException, Body
+from fastapi import APIRouter, HTTPException, Body, Depends
 from fastapi.concurrency import run_in_threadpool
 from app.core.config import settings
-from supabase import create_client, Client
+from app.services.supabase import supabase
 from app.services.ai_service import generate_embedding
+from app.dependencies.auth import get_current_user
 from openai import AsyncOpenAI
 
 router = APIRouter()
-supabase: Client = create_client(settings.SUPABASE_URL, settings.SUPABASE_KEY)
 client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
 
 @router.post("/{document_id}")
-async def chat_with_document(document_id: str, query: str = Body(..., embed=True)):
+async def chat_with_document(
+    document_id: str, 
+    query: str = Body(..., embed=True),
+    user = Depends(get_current_user)
+):
     try:
         # 1. Generate embedding for the query (Async)
         query_embedding = await generate_embedding(query)
@@ -25,7 +29,8 @@ async def chat_with_document(document_id: str, query: str = Body(..., embed=True
                 "query_embedding": query_embedding,
                 "match_threshold": 0.1, # Lowered from 0.5
                 "match_count": 5,
-                "filter_document_id": filter_id
+                "filter_document_id": filter_id,
+                "filter_user_id": user.id
             }).execute()
             
         res = await run_in_threadpool(search_db)
