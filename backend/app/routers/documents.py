@@ -80,7 +80,16 @@ async def process_document_ai(document_id: str, file_content: bytes, file_type: 
             print("No text content extracted to embed.")
 
     except Exception as e:
-        print(f"Background AI Task Error: {e}")
+        print(f"CRITICAL ERROR in Background AI Task for document {document_id}: {e}")
+        import traceback
+        traceback.print_exc()
+        # Attempt to update status to 'Error'
+        try:
+            supabase.table("documents").update({
+                "category": "Error"
+            }).eq("id", document_id).execute()
+        except:
+            print("Failed to update document status to Error")
 
 @router.post("/upload")
 async def upload_document(
