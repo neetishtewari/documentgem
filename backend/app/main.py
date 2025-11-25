@@ -7,12 +7,13 @@ app = FastAPI(title="Document Intelligence Platform API")
 # Configure CORS
 origins = [
     "http://localhost:3000",
+    "https://documentgem.vercel.app",
     os.getenv("FRONTEND_URL", ""),
 ]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[origin for origin in origins if origin],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
