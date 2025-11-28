@@ -6,32 +6,77 @@ import json
 
 client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
 
-async def classify_document(file_content: bytes, file_type: str) -> dict:
+import base64
+
+async def extract_text_from_document(file_content: bytes, file_type: str) -> str:
     """
-    Classifies the document using OpenAI.
-    Returns a dictionary with 'category' and 'confidence'.
+    Extracts text from a document using a hybrid approach:
+    1. Digital PDFs: Use pypdf for fast extraction.
+    2. Images (Scanned/Photos): Use GPT-4o Vision.
+    3. Scanned PDFs (Fallback): TODO - Requires pdf2image + poppler.
     """
     text_content = ""
     
     try:
         if "pdf" in file_type:
-            # Extract text from PDF
-            pdf_file = io.BytesIO(file_content)
-            reader = PdfReader(pdf_file)
-            # Extract text from first few pages to save tokens, usually enough for classification
-            for page in reader.pages[:3]: 
-                text_content += page.extract_text() or ""
-        else:
-            # For now, assume images are not supported for text extraction in this simple pass
-            # Or we could use GPT-4o Vision here. 
-            # Let's stick to text-based for now or simple placeholder if no text found.
-            pass
+            # Try pypdf first (Fast path for digital PDFs)
+            try:
+                pdf_file = io.BytesIO(file_content)
+                reader = PdfReader(pdf_file)
+                for page in reader.pages:
+                    text_content += page.extract_text() or ""
+            except Exception as e:
+                print(f"pypdf extraction failed: {e}")
+
+            # If pypdf extracted very little text, it might be a scanned PDF.
+            # For now, we return what we found. 
+            # TODO: Implement PDF->Image conversion for scanned PDFs if text_content is empty.
+            
+        elif "image" in file_type:
+            # Use GPT-4o Vision for images
+            print("Processing image with GPT-4o Vision...")
+            base64_image = base64.b64encode(file_content).decode('utf-8')
+            
+            response = await client.chat.completions.create(
+                model="gpt-4o",
+                messages=[
+                    {
+                        "role": "user",
+                        "content": [
+                            {"type": "text", "text": "Transcribe the text from this image exactly as it appears. If there are tables, represent them as Markdown tables."},
+                            {
+                                "type": "image_url",
+                                "image_url": {
+                                    "url": f"data:{file_type};base64,{base64_image}"
+                                }
+                            }
+                        ]
+                    }
+                ],
+                max_tokens=4000
+            )
+            text_content = response.choices[0].message.content
+            
+    except Exception as e:
+        print(f"Text Extraction Error: {e}")
+        
+    return text_content
+
+async def classify_document(file_content: bytes, file_type: str) -> dict:
+    """
+    Classifies the document using OpenAI.
+    Returns a dictionary with 'category' and 'confidence'.
+    """
+    try:
+        # 1. Extract Text (Centralized Logic)
+        text_content = await extract_text_from_document(file_content, file_type)
 
         if not text_content:
             return {"category": "Uncategorized", "confidence": 0.0, "summary": "Could not extract text for analysis."}
 
-        # Truncate text to avoid token limits
-        text_content = text_content[:4000]
+        # Truncate text to avoid token limits for classification
+        # Keep it reasonable, e.g., first 10k chars
+        analysis_text = text_content[:10000]
 
         response = await client.chat.completions.create(
             model="gpt-4o",
@@ -42,9 +87,9 @@ async def classify_document(file_content: bytes, file_type: str) -> dict:
                                "- 'category': One of [Invoice, Contract, Receipt, Policy, ID, Notice, Other]\n"
                                "- 'confidence': Float 0-1\n"
                                "- 'summary': A brief 1-sentence summary of the document.\n"
-                               "- 'metadata': A dictionary containing key extracted fields such as:\n"
-                               "    - 'dates': List of important dates (e.g., due date, expiry date)\n"
-                               "    - 'amounts': List of monetary amounts found\n"
+                               "- 'metadata': A dictionary containing key extracted fields:\n"
+                               "    - 'dates': List of objects {'label': str, 'value': str} (e.g., {'label': 'Due Date', 'value': '2025-01-01'})\n"
+                               "    - 'amounts': List of objects {'label': str, 'value': str, 'currency': str} (e.g., {'label': 'Total', 'value': '100.00', 'currency': 'USD'})\n"
                                "    - 'entities': List of names, companies, or organizations\n"
                                "    - 'invoice_number': If applicable\n"
                                "    - 'contract_parties': If applicable\n"
@@ -52,13 +97,16 @@ async def classify_document(file_content: bytes, file_type: str) -> dict:
                 },
                 {
                     "role": "user",
-                    "content": f"Analyze this document content:\n\n{text_content}"
+                    "content": f"Analyze this document content:\n\n{analysis_text}"
                 }
             ],
             response_format={"type": "json_object"}
         )
 
         result = json.loads(response.choices[0].message.content)
+        # Attach the full extracted text to the result so we don't have to re-extract it later
+        # (Optional, but good for efficiency if we change the flow)
+        result["_extracted_text"] = text_content 
         return result
 
     except Exception as e:

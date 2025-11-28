@@ -18,8 +18,8 @@ interface Document {
     category: string
     summary: string
     metadata: {
-        dates?: string[]
-        amounts?: string[]
+        dates?: ({ label: string, value: string } | string)[]
+        amounts?: ({ label: string, value: string, currency?: string } | string)[]
         entities?: string[]
         invoice_number?: string
         action_items?: string[]
@@ -137,10 +137,19 @@ export default function DocumentDetailPage() {
                                     </CardTitle>
                                 </CardHeader>
                                 <CardContent>
-                                    <ul className="list-disc pl-4 text-sm">
+                                    <ul className="space-y-1 text-sm">
                                         {document.metadata?.dates?.length ? (
                                             document.metadata.dates.map((date, i) => (
-                                                <li key={i}>{date}</li>
+                                                <li key={i} className="flex justify-between">
+                                                    {typeof date === 'string' ? (
+                                                        <span>{date}</span>
+                                                    ) : (
+                                                        <>
+                                                            <span className="text-muted-foreground">{date.label}:</span>
+                                                            <span className="font-medium">{date.value}</span>
+                                                        </>
+                                                    )}
+                                                </li>
                                             ))
                                         ) : (
                                             <li className="text-muted-foreground">None detected</li>
@@ -157,10 +166,21 @@ export default function DocumentDetailPage() {
                                     </CardTitle>
                                 </CardHeader>
                                 <CardContent>
-                                    <ul className="list-disc pl-4 text-sm">
+                                    <ul className="space-y-1 text-sm">
                                         {document.metadata?.amounts?.length ? (
                                             document.metadata.amounts.map((amount, i) => (
-                                                <li key={i}>{amount}</li>
+                                                <li key={i} className="flex justify-between">
+                                                    {typeof amount === 'string' ? (
+                                                        <span>{amount}</span>
+                                                    ) : (
+                                                        <>
+                                                            <span className="text-muted-foreground">{amount.label}:</span>
+                                                            <span className="font-medium">
+                                                                {amount.currency} {amount.value}
+                                                            </span>
+                                                        </>
+                                                    )}
+                                                </li>
                                             ))
                                         ) : (
                                             <li className="text-muted-foreground">None detected</li>
