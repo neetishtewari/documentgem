@@ -44,20 +44,12 @@ async def process_document_ai(document_id: str, file_content: bytes, file_type: 
         print(f"Document {document_id} classified as {result.get('category')}")
 
         # 2. Generate Embeddings for RAG
-        import io
-        from pypdf import PdfReader
+        # We retrieve the text already extracted during classification
+        text_content = result.get("_extracted_text", "")
         
-        text_content = ""
-        print(f"Processing file type: {file_type}")
-        if "pdf" in file_type:
-            try:
-                pdf_file = io.BytesIO(file_content)
-                reader = PdfReader(pdf_file)
-                for page in reader.pages:
-                    text_content += page.extract_text() or ""
-                print(f"Extracted {len(text_content)} characters from PDF.")
-            except Exception as e:
-                print(f"PDF Extraction Error: {e}")
+        # If for some reason it's missing (e.g. error case), try to extract again or skip
+        if not text_content:
+             print("No text content found in classification result. Skipping embeddings.")
         
         # Sanitize extracted text
         text_content = sanitize_text(text_content)
@@ -188,5 +180,29 @@ def get_documents(category: str = None, user = Depends(get_current_user)):
         response = query.execute()
         return response.data
     except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.delete("/{document_id}")
+def delete_document(document_id: str, user = Depends(get_current_user)):
+    try:
+        # 1. Get document to find file path
+        response = supabase.table("documents").select("*").eq("id", document_id).eq("user_id", user.id).single().execute()
+        if not response.data:
+            raise HTTPException(status_code=404, detail="Document not found")
+        
+        document = response.data
+        file_path = document.get("file_path")
+
+        # 2. Delete from Storage
+        if file_path:
+            supabase.storage.from_("documents").remove([file_path])
+
+        # 3. Delete from Database
+        supabase.table("documents").delete().eq("id", document_id).execute()
+        
+        return {"message": "Document deleted successfully"}
+
+    except Exception as e:
+        print(f"Delete Error: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 

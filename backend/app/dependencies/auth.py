@@ -1,6 +1,6 @@
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from app.services.supabase import supabase
+from app.services.supabase import supabase_public
 
 security = HTTPBearer()
 
@@ -11,8 +11,8 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
     """
     token = credentials.credentials
     try:
-        # Verify the token with Supabase
-        user = supabase.auth.get_user(token)
+        # Verify the token with Supabase (using public client)
+        user = supabase_public.auth.get_user(token)
         if not user:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,

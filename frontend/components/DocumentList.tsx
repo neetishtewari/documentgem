@@ -2,8 +2,18 @@
 
 import { useEffect, useState } from "react"
 import Link from "next/link"
-import { LayoutGrid, List as ListIcon } from "lucide-react"
+import { LayoutGrid, List as ListIcon, FileText } from "lucide-react"
 import { DocumentTable } from "./DocumentTable"
+import { Button } from "@/components/ui/button"
+import { cn } from "@/lib/utils"
+import {
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
+} from "@/components/ui/card"
+import api from "@/lib/api"
 
 interface Document {
     id: string

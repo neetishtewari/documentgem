@@ -9,7 +9,10 @@ api.interceptors.request.use(async (config) => {
     const { data: { session } } = await supabase.auth.getSession()
 
     if (session?.access_token) {
+        // console.log("Attaching token to request:", session.access_token.substring(0, 10) + "...")
         config.headers.Authorization = `Bearer ${session.access_token}`
+    } else {
+        console.warn("No active session found in API interceptor")
     }
 
     return config
