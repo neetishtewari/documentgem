@@ -2,17 +2,8 @@
 
 import { useEffect, useState } from "react"
 import Link from "next/link"
-import { FileText, MoreVertical } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { cn } from "@/lib/utils"
-import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
-} from "@/components/ui/card"
-import api from "@/lib/api"
+import { LayoutGrid, List as ListIcon } from "lucide-react"
+import { DocumentTable } from "./DocumentTable"
 
 interface Document {
     id: string
@@ -21,6 +12,7 @@ interface Document {
     size: number
     category: string
     created_at: string
+    metadata?: any
 }
 
 interface DocumentListProps {
@@ -31,6 +23,7 @@ export function DocumentList({ refreshTrigger }: DocumentListProps) {
     const [documents, setDocuments] = useState<Document[]>([])
     const [loading, setLoading] = useState(true)
     const [filter, setFilter] = useState("All")
+    const [viewMode, setViewMode] = useState<"grid" | "table">("grid")
 
     useEffect(() => {
         const fetchDocuments = async () => {
@@ -58,23 +51,53 @@ export function DocumentList({ refreshTrigger }: DocumentListProps) {
         <div className="space-y-6">
             <div className="flex items-center justify-between">
                 <h2 className="text-xl font-semibold tracking-tight text-slate-900">Your Documents</h2>
-                <div className="flex gap-1 bg-slate-100/80 p-1 rounded-xl">
-                    {categories.map((cat) => (
+                <div className="flex items-center gap-4">
+                    <div className="flex gap-1 bg-slate-100/80 p-1 rounded-xl">
+                        {categories.map((cat) => (
+                            <Button
+                                key={cat}
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setFilter(cat)}
+                                className={cn(
+                                    "rounded-lg px-3 py-1.5 text-xs font-medium transition-all duration-200 hover:bg-white/50",
+                                    filter === cat
+                                        ? "bg-white text-slate-900 shadow-sm ring-1 ring-black/5"
+                                        : "text-slate-500 hover:text-slate-900"
+                                )}
+                            >
+                                {cat}
+                            </Button>
+                        ))}
+                    </div>
+                    <div className="flex gap-1 bg-slate-100/80 p-1 rounded-xl">
                         <Button
-                            key={cat}
                             variant="ghost"
-                            size="sm"
-                            onClick={() => setFilter(cat)}
+                            size="icon"
+                            onClick={() => setViewMode("grid")}
                             className={cn(
-                                "rounded-lg px-3 py-1.5 text-xs font-medium transition-all duration-200 hover:bg-white/50",
-                                filter === cat
+                                "h-8 w-8 rounded-lg transition-all duration-200",
+                                viewMode === "grid"
                                     ? "bg-white text-slate-900 shadow-sm ring-1 ring-black/5"
                                     : "text-slate-500 hover:text-slate-900"
                             )}
                         >
-                            {cat}
+                            <LayoutGrid className="h-4 w-4" />
                         </Button>
-                    ))}
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setViewMode("table")}
+                            className={cn(
+                                "h-8 w-8 rounded-lg transition-all duration-200",
+                                viewMode === "table"
+                                    ? "bg-white text-slate-900 shadow-sm ring-1 ring-black/5"
+                                    : "text-slate-500 hover:text-slate-900"
+                            )}
+                        >
+                            <ListIcon className="h-4 w-4" />
+                        </Button>
+                    </div>
                 </div>
             </div>
 
@@ -92,6 +115,8 @@ export function DocumentList({ refreshTrigger }: DocumentListProps) {
                     <h3 className="text-lg font-semibold text-slate-900">No documents found</h3>
                     <p className="text-sm text-slate-500 mt-1">Try adjusting your filters or upload a new document</p>
                 </div>
+            ) : viewMode === "table" ? (
+                <DocumentTable documents={documents} category={filter} />
             ) : (
                 <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                     {documents.map((doc) => (
