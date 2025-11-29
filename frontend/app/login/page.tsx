@@ -48,6 +48,11 @@ export default function LoginPage() {
         <div className="flex min-h-screen items-center justify-center bg-slate-50 p-4">
             <Card className="w-full max-w-md border-none shadow-xl shadow-slate-200/50">
                 <CardHeader className="space-y-1 text-center">
+                    <div className="flex justify-center mb-6">
+                        <h1 className="text-5xl font-extrabold tracking-tight text-slate-900">
+                            Document<span className="text-blue-600">Gem</span>
+                        </h1>
+                    </div>
                     <CardTitle className="text-2xl font-bold tracking-tight text-slate-900">
                         {isSignUp ? "Create an account" : "Welcome back"}
                     </CardTitle>

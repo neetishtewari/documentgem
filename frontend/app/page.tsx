@@ -30,7 +30,11 @@ export default function Home() {
       <div className="container mx-auto py-10 space-y-8">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div className="flex flex-col space-y-2">
-            <h1 className="text-3xl font-bold tracking-tight text-slate-900">DocumentGem</h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-4xl font-extrabold tracking-tight text-slate-900">
+                Document<span className="text-blue-600">Gem</span>
+              </h1>
+            </div>
             <p className="text-muted-foreground">
               Upload, categorize, and analyze your business documents with AI.
             </p>
