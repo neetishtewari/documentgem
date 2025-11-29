@@ -151,22 +151,29 @@ Given the sensitive nature of business documents, the platform must adhere to st
 - **Secure API Usage:** Ensure all integrations with third-party APIs (e.g., OpenAI, cloud storage) are secure, using best practices for API key management and secure communication.
 
 5. UI Flow Overview
-Home Page
+Home Page (Dashboard)
 
-→ “Upload Documents” button
-→ List/Grid of documents with filters
-→ Sort by: date / name / category
+→ Sidebar Navigation (Left):
+  - Main: Dashboard, Documents, Insights
+  - Connections: Integrations, Activity Log
+  - System: Settings, Trash
+→ Main Content Area (Right):
+  - Dashboard widgets (Recent Activity, Pending Alerts)
 
 Document Detail Page
 
-→ Left: Viewer
-→ Right: Insights + Data Table
-→ Chat at bottom right
+→ Left Sidebar: Navigation (collapsed or persistent)
+→ Center/Left Panel: Document Viewer
+→ Right Panel: Insights + Data Table + Chat
 
 Settings Page (Phase 2)
 
 → Connect Email / Shared Drives
 → Set alerts & automation preferences
+
+Design Requirements
+- **Color Scheme**: Use a darker shade of blue (e.g., Slate-900 or Deep Royal Blue) for the sidebar and primary accents to convey a premium, professional feel.
+- **Layout**: Scalable Side Menu instead of Top Navigation.
 
 6. AI Prompting Strategy (for your data science / LLM team)
 

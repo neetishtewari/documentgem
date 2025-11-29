@@ -5,18 +5,27 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { FileText, Receipt, FileCheck, File } from "lucide-react"
 import api from "@/lib/api"
 
+import { DateRange } from "@/components/DateFilter"
+
 interface Stats {
     total_documents: number
     category_counts: Record<string, number>
 }
 
-export function DashboardStats({ refreshTrigger }: { refreshTrigger: number }) {
+export function DashboardStats({ refreshTrigger, dateRange }: { refreshTrigger: number, dateRange?: DateRange }) {
     const [stats, setStats] = useState<Stats | null>(null)
 
     useEffect(() => {
         const fetchStats = async () => {
             try {
-                const response = await api.get("/api/documents/stats")
+                let url = "/api/documents/stats"
+                const params = new URLSearchParams()
+                if (dateRange?.from) params.append("start_date", dateRange.from.toISOString())
+                if (dateRange?.to) params.append("end_date", dateRange.to.toISOString())
+
+                if (params.toString()) url += `?${params.toString()}`
+
+                const response = await api.get(url)
                 setStats(response.data)
             } catch (error) {
                 console.error("Failed to fetch stats:", error)
@@ -24,7 +33,7 @@ export function DashboardStats({ refreshTrigger }: { refreshTrigger: number }) {
         }
 
         fetchStats()
-    }, [refreshTrigger])
+    }, [refreshTrigger, dateRange])
 
     if (!stats) return null
 

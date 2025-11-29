@@ -152,10 +152,21 @@ async def upload_document(
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/stats")
-def get_stats(user = Depends(get_current_user)):
+def get_stats(
+    start_date: str = None,
+    end_date: str = None,
+    user = Depends(get_current_user)
+):
     try:
         # Get counts by category for the current user
-        response = supabase.table("documents").select("category").eq("user_id", user.id).execute()
+        query = supabase.table("documents").select("category").eq("user_id", user.id)
+        
+        if start_date:
+            query = query.gte("created_at", start_date)
+        if end_date:
+            query = query.lte("created_at", end_date)
+            
+        response = query.execute()
         categories = [doc['category'] for doc in response.data]
         
         from collections import Counter
@@ -169,13 +180,23 @@ def get_stats(user = Depends(get_current_user)):
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/")
-def get_documents(category: str = None, user = Depends(get_current_user)):
+def get_documents(
+    category: str = None, 
+    start_date: str = None,
+    end_date: str = None,
+    user = Depends(get_current_user)
+):
     # Changed to sync def so FastAPI runs it in a thread pool automatically
     try:
         query = supabase.table("documents").select("*").eq("user_id", user.id).order("created_at", desc=True)
         
         if category and category != "All":
             query = query.eq("category", category)
+            
+        if start_date:
+            query = query.gte("created_at", start_date)
+        if end_date:
+            query = query.lte("created_at", end_date)
             
         response = query.execute()
         return response.data

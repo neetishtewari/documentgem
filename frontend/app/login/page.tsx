@@ -50,11 +50,11 @@ export default function LoginPage() {
                 <CardHeader className="space-y-1 text-center">
                     <div className="flex justify-center mb-6">
                         <h1 className="text-5xl font-extrabold tracking-tight text-slate-900">
-                            Document<span className="text-blue-600">Gem</span>
+                            Document<span className="text-[var(--primary)]">Gem</span>
                         </h1>
                     </div>
                     <CardTitle className="text-2xl font-bold tracking-tight text-slate-900">
-                        {isSignUp ? "Create an account" : "Welcome back"}
+                        {isSignUp ? "Create an account" : "Sign In"}
                     </CardTitle>
                     <CardDescription>
                         {isSignUp
@@ -89,7 +89,7 @@ export default function LoginPage() {
                                 {error}
                             </div>
                         )}
-                        <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white" disabled={loading}>
+                        <Button type="submit" className="w-full bg-[var(--primary)] hover:bg-[var(--primary)]/90 text-white" disabled={loading}>
                             {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                             {isSignUp ? "Sign Up" : "Sign In"}
                         </Button>
@@ -98,7 +98,7 @@ export default function LoginPage() {
                             <button
                                 type="button"
                                 onClick={() => setIsSignUp(!isSignUp)}
-                                className="underline hover:text-blue-600"
+                                className="underline hover:text-[var(--primary)]"
                             >
                                 {isSignUp ? "Sign In" : "Sign Up"}
                             </button>

@@ -15,6 +15,8 @@ import {
 } from "@/components/ui/card"
 import api from "@/lib/api"
 
+import { DateRange } from "@/components/DateFilter"
+
 interface Document {
     id: string
     name: string
@@ -27,9 +29,10 @@ interface Document {
 
 interface DocumentListProps {
     refreshTrigger: number
+    dateRange?: DateRange
 }
 
-export function DocumentList({ refreshTrigger }: DocumentListProps) {
+export function DocumentList({ refreshTrigger, dateRange }: DocumentListProps) {
     const [documents, setDocuments] = useState<Document[]>([])
     const [loading, setLoading] = useState(true)
     const [filter, setFilter] = useState("All")
@@ -39,9 +42,14 @@ export function DocumentList({ refreshTrigger }: DocumentListProps) {
         const fetchDocuments = async () => {
             try {
                 setLoading(true) // Set loading to true when fetching new data
-                const url = filter === "All"
-                    ? "/api/documents/"
-                    : `/api/documents/?category=${filter}`
+                let url = "/api/documents/"
+                const params = new URLSearchParams()
+
+                if (filter !== "All") params.append("category", filter)
+                if (dateRange?.from) params.append("start_date", dateRange.from.toISOString())
+                if (dateRange?.to) params.append("end_date", dateRange.to.toISOString())
+
+                if (params.toString()) url += `?${params.toString()}`
 
                 const response = await api.get(url)
                 setDocuments(response.data)
@@ -53,7 +61,7 @@ export function DocumentList({ refreshTrigger }: DocumentListProps) {
         }
 
         fetchDocuments()
-    }, [refreshTrigger, filter])
+    }, [refreshTrigger, filter, dateRange])
 
     const categories = ["All", "Invoice", "Receipt", "Contract", "Policy", "Other"]
 

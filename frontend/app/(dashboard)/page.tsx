@@ -10,10 +10,12 @@ import { UploadZone } from "@/components/UploadZone"
 import { DashboardStats } from "@/components/DashboardStats"
 import { GlobalChat } from "@/components/GlobalChat"
 import { Button } from "@/components/ui/button"
+import { DateFilter, DateRange } from "@/components/DateFilter"
 
 export default function Home() {
   const [refreshTrigger, setRefreshTrigger] = useState(0)
   const [isChatOpen, setIsChatOpen] = useState(false)
+  const [dateRange, setDateRange] = useState<DateRange>({ from: undefined, to: undefined })
   const router = useRouter()
 
   const handleUploadComplete = () => {
@@ -31,16 +33,17 @@ export default function Home() {
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div className="flex flex-col space-y-2">
             <div className="flex items-center gap-2">
-              <h1 className="text-4xl font-extrabold tracking-tight text-slate-900">
-                Document<span className="text-blue-600">Gem</span>
+              <h1 className="text-4xl font-extrabold tracking-tight text-[var(--primary)]">
+                Document<span className="text-[var(--primary)] opacity-80">Gem</span>
               </h1>
             </div>
             <p className="text-muted-foreground">
               Upload, categorize, and analyze your business documents with AI.
             </p>
           </div>
-          <div className="flex gap-2">
-            <Button onClick={() => setIsChatOpen(true)} className="gap-2 bg-blue-600 hover:bg-blue-700 text-white shadow-md shadow-blue-500/20">
+          <div className="flex gap-2 items-center">
+            <DateFilter onFilterChange={setDateRange} />
+            <Button onClick={() => setIsChatOpen(true)} className="gap-2 bg-[var(--primary)] hover:bg-[var(--primary)]/90 text-white shadow-md shadow-blue-900/20">
               <Sparkles className="h-4 w-4" />
               Chat with All Documents
             </Button>
@@ -50,14 +53,14 @@ export default function Home() {
           </div>
         </div>
 
-        <DashboardStats refreshTrigger={refreshTrigger} />
+        <DashboardStats refreshTrigger={refreshTrigger} dateRange={dateRange} />
 
         <div className="grid gap-8 md:grid-cols-[300px_1fr]">
           <div className="space-y-4">
             <UploadZone onUploadComplete={handleUploadComplete} />
           </div>
           <div className="space-y-4">
-            <DocumentList refreshTrigger={refreshTrigger} />
+            <DocumentList refreshTrigger={refreshTrigger} dateRange={dateRange} />
           </div>
         </div>
 
