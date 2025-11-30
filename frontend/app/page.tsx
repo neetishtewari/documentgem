@@ -21,7 +21,7 @@ export default function LandingPage() {
                                 Sign In
                             </Button>
                         </Link>
-                        <Link href="/signup">
+                        <Link href="/login?signup=true">
                             <Button className="bg-brand-navy hover:bg-brand-navy/90 text-white">
                                 Get Started
                             </Button>
@@ -50,7 +50,7 @@ export default function LandingPage() {
                         </p>
 
                         <div className="flex flex-col sm:flex-row items-center justify-center gap-4 animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-300">
-                            <Link href="/signup">
+                            <Link href="/login?signup=true">
                                 <Button size="lg" className="h-12 px-8 text-lg bg-brand-navy hover:bg-brand-navy/90 text-white shadow-lg shadow-blue-900/20 transition-transform hover:scale-105">
                                     Start for Free <ArrowRight className="ml-2 h-5 w-5" />
                                 </Button>
@@ -124,7 +124,7 @@ export default function LandingPage() {
                         <p className="mx-auto max-w-2xl text-lg text-blue-100 mb-10">
                             Join thousands of users who trust DocumentGem to manage their critical business documents.
                         </p>
-                        <Link href="/signup">
+                        <Link href="/login?signup=true">
                             <Button size="lg" className="h-12 px-8 text-lg bg-white text-brand-navy hover:bg-blue-50">
                                 Get Started Now
                             </Button>

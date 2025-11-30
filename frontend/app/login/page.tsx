@@ -5,14 +5,16 @@ import { supabase } from "@/lib/supabase"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { Loader2 } from "lucide-react"
+import { Suspense } from "react"
 
-export default function LoginPage() {
+function LoginForm() {
     const [email, setEmail] = useState("")
     const [password, setPassword] = useState("")
     const [loading, setLoading] = useState(false)
-    const [isSignUp, setIsSignUp] = useState(false)
+    const searchParams = useSearchParams()
+    const [isSignUp, setIsSignUp] = useState(searchParams.get("signup") === "true")
     const [error, setError] = useState<string | null>(null)
     const router = useRouter()
 
@@ -107,5 +109,13 @@ export default function LoginPage() {
                 </CardContent>
             </Card>
         </div>
+    )
+}
+
+export default function LoginPage() {
+    return (
+        <Suspense fallback={<div className="flex min-h-screen items-center justify-center bg-slate-50"><Loader2 className="h-8 w-8 animate-spin text-brand-navy" /></div>}>
+            <LoginForm />
+        </Suspense>
     )
 }
