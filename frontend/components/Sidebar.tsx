@@ -19,7 +19,7 @@ const menuItems = [
     {
         title: "Main",
         items: [
-            { name: "Dashboard", href: "/", icon: LayoutDashboard },
+            { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
             { name: "Insights", href: "/insights", icon: BarChart3 },
         ],
     },
