@@ -6,7 +6,9 @@ import { Loader2, CheckCircle, XCircle } from "lucide-react"
 import api from "@/lib/api"
 import { Button } from "@/components/ui/button"
 
-export default function IntegrationCallbackPage() {
+import { Suspense } from "react"
+
+function CallbackContent() {
     const router = useRouter()
     const searchParams = useSearchParams()
     const [status, setStatus] = useState<"loading" | "success" | "error">("loading")
@@ -83,5 +85,18 @@ export default function IntegrationCallbackPage() {
                 </>
             )}
         </div>
+    )
+}
+
+export default function IntegrationCallbackPage() {
+    return (
+        <Suspense fallback={
+            <div className="flex h-[80vh] flex-col items-center justify-center gap-4">
+                <Loader2 className="h-12 w-12 animate-spin text-blue-600" />
+                <h2 className="text-xl font-semibold text-slate-900">Loading...</h2>
+            </div>
+        }>
+            <CallbackContent />
+        </Suspense>
     )
 }
