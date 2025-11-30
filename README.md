@@ -94,11 +94,9 @@ npm run dev
 
 Visit `http://localhost:3000` to see the app!
 
-## 📸 Screenshots
-*(Add screenshots of Dashboard, Document Details, and Insights here)*
+
 
 ## 🤝 Contributing
 Contributions are welcome! Please feel free to submit a Pull Request.
 
-## 📄 License
-This project is licensed under the MIT License.
+
