@@ -1,9 +1,8 @@
-
 "use client"
 
 import { useEffect, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
-import { ArrowLeft, FileText, Calendar, DollarSign, Building, AlertCircle, Trash2, Download } from "lucide-react"
+import { ArrowLeft, FileText, Calendar, DollarSign, Building, AlertCircle, Trash2, Download, Mail, UploadCloud } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { supabase } from "@/lib/supabase"
@@ -26,6 +25,8 @@ interface Document {
         action_items?: string[]
     }
     created_at: string
+    source?: string
+    source_date?: string
 }
 
 export default function DocumentDetailPage() {
@@ -134,8 +135,6 @@ export default function DocumentDetailPage() {
         }
     }
 
-    // ... (existing useEffect)
-
     if (loading) return <div className="p-8">Loading...</div>
     if (!doc) return <div className="p-8">Document not found</div>
 
@@ -180,14 +179,31 @@ export default function DocumentDetailPage() {
                                 <span className="rounded-full bg-primary/10 px-3 py-1 text-sm font-medium text-primary">
                                     {doc.category}
                                 </span>
-                                <span className="text-sm text-muted-foreground">
-                                    {new Date(doc.created_at).toLocaleDateString()}
+
+                                {/* Source Badge */}
+                                <div className="flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1 text-sm font-medium text-slate-600">
+                                    {doc.source === 'Gmail' ? (
+                                        <>
+                                            <Mail className="h-3.5 w-3.5 text-red-500" />
+                                            <span>Gmail</span>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <UploadCloud className="h-3.5 w-3.5 text-slate-500" />
+                                            <span>Upload</span>
+                                        </>
+                                    )}
+                                </div>
+
+                                <span className="text-sm text-muted-foreground ml-1">
+                                    {new Date(doc.source_date || doc.created_at).toLocaleDateString(undefined, {
+                                        year: 'numeric',
+                                        month: 'long',
+                                        day: 'numeric'
+                                    })}
                                 </span>
                             </div>
                         </div>
-
-                        {/* Chat Interface */}
-                        <Chat documentId={doc.id} />
 
                         {/* Summary Card */}
                         <Card>
@@ -306,6 +322,9 @@ export default function DocumentDetailPage() {
                                 </CardContent>
                             </Card>
                         </div>
+
+                        {/* Chat Interface */}
+                        <Chat documentId={doc.id} />
                     </div>
                 </div>
             </div>

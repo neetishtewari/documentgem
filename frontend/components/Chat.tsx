@@ -58,7 +58,7 @@ export function Chat({ documentId }: ChatProps) {
     }
 
     return (
-        <Card className="flex h-[600px] flex-col">
+        <Card className="flex h-[400px] flex-col">
             <CardHeader className="border-b px-4 py-3">
                 <CardTitle className="text-sm font-medium flex items-center gap-2">
                     <Bot className="h-4 w-4 text-primary" />
