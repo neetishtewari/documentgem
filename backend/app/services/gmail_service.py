@@ -122,6 +122,13 @@ async def fetch_gmail_attachments(integration_id: str, user_id: str):
                         
                         data = base64.urlsafe_b64decode(attachment['data'].encode('UTF-8'))
                         
+                        # Check for duplicates
+                        # We use the message ID as the unique source identifier
+                        existing = supabase.table("documents").select("id").contains("metadata", {"source_id": msg_id}).execute()
+                        if existing.data:
+                            print(f"Skipping duplicate email: {msg_id}")
+                            continue
+
                         # Upload to Storage
                         file_ext = filename.split(".")[-1]
                         file_path = f"{user_id}/{uuid.uuid4()}.{file_ext}"
@@ -142,7 +149,8 @@ async def fetch_gmail_attachments(integration_id: str, user_id: str):
                             "user_id": user_id,
                             "summary": f"Imported from Gmail (Message ID: {msg_id})",
                             "source": "Gmail",
-                            "source_date": email_date
+                            "source_date": email_date,
+                            "metadata": {"source_id": msg_id}
                         }
                         
                         response = supabase.table("documents").insert(document_data).execute()

@@ -72,11 +72,11 @@ def fetch_drive_files(integration_id: str, user_id: str):
             
             print(f"Processing file: {file_name} ({file_id})")
 
-            # Check if document already exists (by source + name/id combination to avoid dupes)
-            # For now, we'll just check if a document with this name and source='Drive' exists created around the same time?
-            # Better: Store the Drive File ID in metadata or a separate column. 
-            # For simplicity in this MVP, we'll check if we have a doc with this name and source='Drive'
-            # A more robust way would be to store external_id, but let's stick to the current schema.
+            # Check for duplicates using source_id in metadata
+            existing = supabase.table("documents").select("id").contains("metadata", {"source_id": file_id}).execute()
+            if existing.data:
+                print(f"Skipping duplicate file: {file_name} ({file_id})")
+                continue
             
             # 4. Download File
             request = service.files().get_media(fileId=file_id)
@@ -119,7 +119,8 @@ def fetch_drive_files(integration_id: str, user_id: str):
                 "size": int(item.get('size', 0)),
                 "source": "Drive",
                 "source_date": modified_time, # Use Drive modification time
-                "status": "pending"
+                "status": "pending",
+                "metadata": {"source_id": file_id}
             }
             
             # Insert into documents table
