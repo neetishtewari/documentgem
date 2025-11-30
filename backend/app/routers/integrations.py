@@ -8,6 +8,7 @@ from google.auth.transport.requests import Request as GoogleRequest
 from app.dependencies.auth import get_current_user
 from app.services.supabase import supabase
 from app.services.gmail_service import fetch_gmail_attachments
+from app.services.drive_service import fetch_drive_files
 
 router = APIRouter()
 
@@ -115,6 +116,7 @@ def connect_google(
         if integration_id:
             print(f"Triggering background sync for integration {integration_id}")
             background_tasks.add_task(fetch_gmail_attachments, integration_id, user.id)
+            background_tasks.add_task(fetch_drive_files, integration_id, user.id)
             
         return {"status": "success"}
         

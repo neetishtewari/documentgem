@@ -152,31 +152,64 @@ export default function IntegrationsPage() {
                 </Card>
 
                 {/* Google Drive Integration Card */}
-                <Card>
+                <Card className={isGmailConnected ? "border-blue-200 bg-blue-50/50" : ""}>
                     <CardHeader>
-                        <div className="flex items-center gap-2 mb-2">
-                            <div className="p-2 bg-blue-100 rounded-lg">
-                                <HardDrive className="h-6 w-6 text-blue-600" />
+                        <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center gap-2">
+                                <div className="p-2 bg-blue-100 rounded-lg">
+                                    <HardDrive className="h-6 w-6 text-blue-600" />
+                                </div>
+                                <CardTitle>Google Drive</CardTitle>
                             </div>
-                            <CardTitle>Google Drive</CardTitle>
+                            {isGmailConnected && (
+                                <span className="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800">
+                                    Connected
+                                </span>
+                            )}
                         </div>
                         <CardDescription>
-                            Sync documents from specific folders in your Google Drive.
+                            Sync documents from your Google Drive.
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
                         <div className="text-sm text-muted-foreground">
-                            <ul className="list-disc list-inside space-y-1">
-                                <li>Select specific folders to watch</li>
-                                <li>Auto-sync every 24 hours</li>
-                                <li>Supports shared drives</li>
-                            </ul>
+                            {isGmailConnected ? (
+                                <div className="space-y-2">
+                                    <p className="text-slate-700 font-medium">
+                                        Sync Status: {gmailIntegration.sync_status || 'Idle'}
+                                    </p>
+                                    <p>Last synced: {gmailIntegration.last_synced_at ? new Date(gmailIntegration.last_synced_at).toLocaleString('en-US', {
+                                        day: 'numeric',
+                                        month: 'short',
+                                        year: 'numeric',
+                                        hour: 'numeric',
+                                        minute: 'numeric',
+                                        timeZoneName: 'short'
+                                    }) : 'Never'}</p>
+                                </div>
+                            ) : (
+                                <ul className="list-disc list-inside space-y-1">
+                                    <li>Scans for PDF, JPG, PNG</li>
+                                    <li>Auto-sync every 5 minutes</li>
+                                    <li>Supports shared drives</li>
+                                </ul>
+                            )}
                         </div>
                     </CardContent>
                     <CardFooter>
-                        <Button className="w-full" variant="outline">
-                            Connect Drive
-                        </Button>
+                        {isGmailConnected ? (
+                            <Button
+                                variant="outline"
+                                className="w-full text-red-600 hover:text-red-700 hover:bg-red-50"
+                                onClick={() => handleDisconnect(gmailIntegration.id)}
+                            >
+                                Disconnect
+                            </Button>
+                        ) : (
+                            <Button className="w-full" onClick={() => setIsGmailDialogOpen(true)}>
+                                Connect Drive
+                            </Button>
+                        )}
                     </CardFooter>
                 </Card>
             </div>

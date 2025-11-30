@@ -183,6 +183,8 @@ async def fetch_gmail_attachments(integration_id: str, user_id: str):
             "sync_message": f"Error: {str(e)}"
         }).eq("id", integration_id).execute()
 
+from app.services.drive_service import fetch_drive_files
+
 async def sync_all_integrations():
     """
     Iterates through all active integrations and triggers sync.
@@ -195,9 +197,22 @@ async def sync_all_integrations():
         
         for integration in integrations:
             # We can run these in parallel or sequentially.
-            # For simplicity, sequential await here, or fire-and-forget background tasks if we had the app context.
-            # Since this is called by APScheduler, we can await.
+            # For simplicity, sequential await here.
+            
+            # 1. Sync Gmail
             await fetch_gmail_attachments(integration['id'], integration['user_id'])
+            
+            # 2. Sync Drive (if scopes allow)
+            # We assume if provider is google, it might have drive access. 
+            # The fetch_drive_files function will handle auth errors if scopes are missing?
+            # Or we can check scopes if we stored them. 
+            # For now, just try it.
+            try:
+                # fetch_drive_files is sync, so we run it directly or in threadpool?
+                # It is blocking, so ideally run_in_threadpool.
+                await run_in_threadpool(fetch_drive_files, integration['id'], integration['user_id'])
+            except Exception as e:
+                print(f"Drive sync failed for {integration['id']}: {e}")
             
     except Exception as e:
         print(f"Error in sync_all_integrations: {e}")
