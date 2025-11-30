@@ -19,11 +19,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-from app.routers import documents, chat, integrations
+from app.routers import documents, chat, integrations, insights
 
 app.include_router(documents.router, prefix="/api/documents", tags=["documents"])
 app.include_router(chat.router, prefix="/api/chat", tags=["chat"])
 app.include_router(integrations.router, prefix="/api", tags=["integrations"])
+app.include_router(insights.router, prefix="/api", tags=["insights"])
 
 from app.services.scheduler import start_scheduler
 

@@ -12,6 +12,8 @@ import {
     Activity
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useEffect, useState } from "react";
+import { supabase } from "@/lib/supabase";
 
 const menuItems = [
     {
@@ -39,6 +41,17 @@ const menuItems = [
 
 export function Sidebar() {
     const pathname = usePathname();
+    const [userEmail, setUserEmail] = useState<string>("user@example.com");
+
+    useEffect(() => {
+        const getUser = async () => {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user?.email) {
+                setUserEmail(user.email);
+            }
+        };
+        getUser();
+    }, []);
 
     return (
         <div className="flex h-screen w-64 flex-col bg-[var(--sidebar-background)] text-[var(--sidebar-foreground)] border-r border-gray-800">
@@ -80,10 +93,12 @@ export function Sidebar() {
 
             <div className="border-t border-gray-800 p-4">
                 <div className="flex items-center gap-3 rounded-md bg-gray-900/50 p-3">
-                    <div className="h-8 w-8 rounded-full bg-gray-700" />
-                    <div className="flex flex-col">
-                        <span className="text-sm font-medium text-white">User</span>
-                        <span className="text-xs text-gray-400">user@example.com</span>
+                    <div className="h-8 w-8 rounded-full bg-gray-700 flex items-center justify-center text-xs font-medium text-white">
+                        {userEmail[0].toUpperCase()}
+                    </div>
+                    <div className="flex flex-col overflow-hidden">
+                        <span className="text-sm font-medium text-white truncate">User</span>
+                        <span className="text-xs text-gray-400 truncate" title={userEmail}>{userEmail}</span>
                     </div>
                 </div>
             </div>
