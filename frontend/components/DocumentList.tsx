@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import Link from "next/link"
-import { LayoutGrid, List as ListIcon, FileText } from "lucide-react"
+import { LayoutGrid, List as ListIcon, FileText, Mail, UploadCloud } from "lucide-react"
 import { DocumentTable } from "./DocumentTable"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
@@ -25,6 +25,8 @@ interface Document {
     category: string
     created_at: string
     metadata?: any
+    source?: string
+    source_date?: string
 }
 
 interface DocumentListProps {
@@ -143,19 +145,31 @@ export function DocumentList({ refreshTrigger, dateRange }: DocumentListProps) {
                                 <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-transparent via-blue-500/20 to-transparent opacity-0 transition-opacity group-hover:opacity-100" />
                                 <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
                                     <div className="flex items-start gap-4">
-                                        <div className="rounded-xl bg-blue-50 p-3 transition-colors group-hover:bg-blue-100/80">
+                                        <div className="rounded-xl bg-blue-50 p-3 transition-colors group-hover:bg-blue-100/80 relative">
                                             <FileText className="h-6 w-6 text-blue-600" />
+                                            {doc.source === 'Gmail' && (
+                                                <div className="absolute -bottom-1 -right-1 bg-white rounded-full p-0.5 shadow-sm border border-slate-100">
+                                                    <Mail className="h-3 w-3 text-red-500" />
+                                                </div>
+                                            )}
+                                            {doc.source === 'Upload' && (
+                                                <div className="absolute -bottom-1 -right-1 bg-white rounded-full p-0.5 shadow-sm border border-slate-100">
+                                                    <UploadCloud className="h-3 w-3 text-slate-500" />
+                                                </div>
+                                            )}
                                         </div>
                                         <div className="space-y-1.5">
                                             <CardTitle className="text-base font-semibold leading-none tracking-tight text-slate-900 line-clamp-1" title={doc.name}>
                                                 {doc.name}
                                             </CardTitle>
                                             <CardDescription className="text-xs font-medium text-slate-500">
-                                                {new Date(doc.created_at).toLocaleDateString(undefined, {
+                                                {new Date(doc.source_date || doc.created_at).toLocaleDateString(undefined, {
                                                     month: 'short',
                                                     day: 'numeric',
                                                     year: 'numeric'
                                                 })}
+                                                <span className="mx-1">•</span>
+                                                {doc.source || 'Upload'}
                                             </CardDescription>
                                         </div>
                                     </div>

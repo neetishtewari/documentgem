@@ -1,13 +1,191 @@
+
+"use client"
+
+import { useState, useEffect } from "react"
+import { Mail, HardDrive } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { IntegrationConfigDialog } from "@/components/IntegrationConfigDialog"
+import api from "@/lib/api"
+
 export default function IntegrationsPage() {
+    const [isGmailDialogOpen, setIsGmailDialogOpen] = useState(false)
+    const [integrations, setIntegrations] = useState<any[]>([])
+    const [loading, setLoading] = useState(true)
+
+    // Fetch status on mount
+    useEffect(() => {
+        fetchStatus()
+    }, [])
+
+    const fetchStatus = async () => {
+        try {
+            const response = await api.get("/api/integrations/status")
+            setIntegrations(response.data)
+        } catch (error) {
+            console.error("Failed to fetch integration status:", error)
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    const handleDisconnect = async (integrationId: string) => {
+        if (!confirm("Are you sure you want to disconnect? This will stop future syncs.")) {
+            return
+        }
+
+        try {
+            await api.delete(`/api/integrations/${integrationId}`)
+            // Refresh status
+            fetchStatus()
+        } catch (error) {
+            console.error("Failed to disconnect:", error)
+            alert("Failed to disconnect. Please try again.")
+        }
+    }
+
+    const handleGmailConnect = async (config: { lookbackDays: number; customDate?: Date }) => {
+        try {
+            // Construct query params
+            const params = new URLSearchParams()
+            params.append("lookback_days", config.lookbackDays.toString())
+            if (config.customDate) {
+                params.append("custom_date", config.customDate.toISOString())
+            }
+
+            console.log("Fetching auth URL with params:", params.toString())
+            const response = await api.get(`/api/auth/google/url?${params.toString()}`)
+            console.log("Auth URL response:", response.data)
+
+            if (response.data.url) {
+                window.location.href = response.data.url
+            } else {
+                console.error("No URL returned from backend")
+                alert("Failed to initiate connection. Please check console for details.")
+            }
+        } catch (error) {
+            console.error("Failed to get auth URL:", error)
+            alert("Failed to connect to backend. Please ensure the server is running.")
+        }
+    }
+
+    const gmailIntegration = integrations.find(i => i.provider === 'google' || i.provider === 'gmail')
+    const isGmailConnected = !!gmailIntegration
+
     return (
-        <div className="flex flex-col gap-4">
-            <h1 className="text-3xl font-bold tracking-tight text-slate-900">Integrations</h1>
-            <div className="rounded-lg border border-dashed border-slate-300 p-8 text-center">
-                <h2 className="text-xl font-semibold text-slate-700">Coming Soon</h2>
-                <p className="mt-2 text-muted-foreground">
-                    Connect your Gmail, Google Drive, and Dropbox to automatically fetch and process documents.
+        <div className="flex flex-col gap-6">
+            <div className="flex flex-col gap-2">
+                <h1 className="text-3xl font-bold tracking-tight text-slate-900">Integrations</h1>
+                <p className="text-muted-foreground">
+                    Connect your external accounts to automatically fetch and process documents.
                 </p>
             </div>
-        </div>
+
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                {/* Gmail Integration Card */}
+                <Card className={isGmailConnected ? "border-green-200 bg-green-50/50" : ""}>
+                    <CardHeader>
+                        <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center gap-2">
+                                <div className="p-2 bg-red-100 rounded-lg">
+                                    <Mail className="h-6 w-6 text-red-600" />
+                                </div>
+                                <CardTitle>Gmail</CardTitle>
+                            </div>
+                            {isGmailConnected && (
+                                <span className="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800">
+                                    Connected
+                                </span>
+                            )}
+                        </div>
+                        <CardDescription>
+                            Automatically fetch invoices, contracts, and receipts from your inbox.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-sm text-muted-foreground">
+                            {isGmailConnected ? (
+                                <div className="space-y-2">
+                                    <p className="text-slate-700 font-medium">
+                                        Sync Status: {gmailIntegration.sync_status || 'Idle'}
+                                    </p>
+                                    {gmailIntegration.sync_status === 'scanning' || gmailIntegration.sync_status === 'syncing' ? (
+                                        <div className="p-3 bg-blue-50 text-blue-700 rounded-md text-xs">
+                                            Scanning your emails. This may take a few hours to fully load. You can navigate away from this page.
+                                        </div>
+                                    ) : (
+
+                                        <p>Last synced: {gmailIntegration.last_synced_at ? new Date(gmailIntegration.last_synced_at).toLocaleString('en-US', {
+                                            day: 'numeric',
+                                            month: 'short',
+                                            year: 'numeric',
+                                            hour: 'numeric',
+                                            minute: 'numeric',
+                                            timeZoneName: 'short'
+                                        }) : 'Never'}</p>
+                                    )}
+                                </div>
+                            ) : (
+                                <ul className="list-disc list-inside space-y-1">
+                                    <li>Scans for attachments (PDF, JPG, PNG)</li>
+                                    <li>Filters by "invoice", "receipt", etc.</li>
+                                    <li>Configurable lookback period</li>
+                                </ul>
+                            )}
+                        </div>
+                    </CardContent>
+                    <CardFooter>
+                        {isGmailConnected ? (
+                            <Button
+                                variant="outline"
+                                className="w-full text-red-600 hover:text-red-700 hover:bg-red-50"
+                                onClick={() => handleDisconnect(gmailIntegration.id)}
+                            >
+                                Disconnect
+                            </Button>
+                        ) : (
+                            <Button className="w-full" onClick={() => setIsGmailDialogOpen(true)}>
+                                Connect Gmail
+                            </Button>
+                        )}
+                    </CardFooter>
+                </Card>
+
+                {/* Google Drive Integration Card */}
+                <Card>
+                    <CardHeader>
+                        <div className="flex items-center gap-2 mb-2">
+                            <div className="p-2 bg-blue-100 rounded-lg">
+                                <HardDrive className="h-6 w-6 text-blue-600" />
+                            </div>
+                            <CardTitle>Google Drive</CardTitle>
+                        </div>
+                        <CardDescription>
+                            Sync documents from specific folders in your Google Drive.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-sm text-muted-foreground">
+                            <ul className="list-disc list-inside space-y-1">
+                                <li>Select specific folders to watch</li>
+                                <li>Auto-sync every 24 hours</li>
+                                <li>Supports shared drives</li>
+                            </ul>
+                        </div>
+                    </CardContent>
+                    <CardFooter>
+                        <Button className="w-full" variant="outline">
+                            Connect Drive
+                        </Button>
+                    </CardFooter>
+                </Card>
+            </div>
+
+            <IntegrationConfigDialog
+                isOpen={isGmailDialogOpen}
+                onOpenChange={setIsGmailDialogOpen}
+                onConnect={handleGmailConnect}
+            />
+        </div >
     )
 }
