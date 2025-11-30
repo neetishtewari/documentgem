@@ -49,8 +49,8 @@ export default function LoginPage() {
             <Card className="w-full max-w-md border-none shadow-xl shadow-slate-200/50">
                 <CardHeader className="space-y-1 text-center">
                     <div className="flex justify-center mb-6">
-                        <h1 className="text-5xl font-extrabold tracking-tight text-slate-900">
-                            Document<span className="text-[var(--primary)]">Gem</span>
+                        <h1 className="text-5xl font-extrabold tracking-tight text-brand-navy">
+                            Document<span className="text-blue-600">Gem</span>
                         </h1>
                     </div>
                     <CardTitle className="text-2xl font-bold tracking-tight text-slate-900">
@@ -89,7 +89,7 @@ export default function LoginPage() {
                                 {error}
                             </div>
                         )}
-                        <Button type="submit" className="w-full bg-[var(--primary)] hover:bg-[var(--primary)]/90 text-white" disabled={loading}>
+                        <Button type="submit" className="w-full bg-brand-navy hover:bg-brand-navy/90 text-white" disabled={loading}>
                             {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                             {isSignUp ? "Sign Up" : "Sign In"}
                         </Button>

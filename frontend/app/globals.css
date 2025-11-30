@@ -35,8 +35,8 @@
   --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  /* Deep Royal Blue */
+  /* Brand Navy as Primary */
+  --primary: hsl(222 47% 11%);
   --primary-foreground: oklch(0.985 0 0);
   --sidebar-background: hsl(222 47% 11%);
   /* Dark Navy */
@@ -51,7 +51,8 @@
   --destructive-foreground: hsl(210 40% 98%);
   --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
+  /* Brand Blue for Focus Rings */
+  --ring: oklch(0.546 0.245 262.88);
   --radius: 0.625rem;
   /* Increased radius for softer look */
   --background: oklch(1 0 0);
@@ -160,5 +161,15 @@
 
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+@layer utilities {
+  .bg-brand-navy {
+    background-color: hsl(222 47% 11%);
+  }
+
+  .text-brand-navy {
+    color: hsl(222 47% 11%);
   }
 }

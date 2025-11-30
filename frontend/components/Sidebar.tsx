@@ -54,7 +54,7 @@ export function Sidebar() {
     }, []);
 
     return (
-        <div className="flex h-screen w-64 flex-col bg-[var(--sidebar-background)] text-[var(--sidebar-foreground)] border-r border-gray-800">
+        <div className="flex h-screen w-64 flex-col bg-brand-navy text-[var(--sidebar-foreground)] border-r border-gray-800">
             <div className="flex h-16 items-center px-6 border-b border-gray-800">
                 <span className="text-xl font-bold tracking-tight text-white">Document<span className="text-blue-400">Gem</span></span>
             </div>

@@ -33,8 +33,8 @@ export default function Home() {
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div className="flex flex-col space-y-2">
             <div className="flex items-center gap-2">
-              <h1 className="text-4xl font-extrabold tracking-tight text-[var(--primary)]">
-                Document<span className="text-[var(--primary)] opacity-80">Gem</span>
+              <h1 className="text-4xl font-extrabold tracking-tight text-brand-navy">
+                Document<span className="text-blue-600 opacity-80">Gem</span>
               </h1>
             </div>
             <p className="text-muted-foreground">
@@ -43,7 +43,7 @@ export default function Home() {
           </div>
           <div className="flex gap-2 items-center">
             <DateFilter onFilterChange={setDateRange} />
-            <Button onClick={() => setIsChatOpen(true)} className="gap-2 bg-[var(--primary)] hover:bg-[var(--primary)]/90 text-white shadow-md shadow-blue-900/20">
+            <Button onClick={() => setIsChatOpen(true)} className="gap-2 bg-brand-navy hover:bg-brand-navy/90 text-white shadow-md shadow-blue-900/20">
               <Sparkles className="h-4 w-4" />
               Chat with All Documents
             </Button>
