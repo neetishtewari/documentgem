@@ -13,6 +13,7 @@ async def fetch_gmail_attachments(integration_id: str, user_id: str):
     Background task to fetch attachments from Gmail and process them.
     """
     print(f"Starting Gmail sync for integration {integration_id}")
+    sync_start_time = datetime.datetime.now(datetime.timezone.utc).isoformat()
     
     try:
         # 1. Get Integration Config & Tokens
@@ -177,7 +178,7 @@ async def fetch_gmail_attachments(integration_id: str, user_id: str):
             "sync_status": "completed",
             "sync_message": "Sync completed successfully.",
             "sync_progress": total_messages,
-            "last_synced_at": datetime.datetime.now(datetime.timezone.utc).isoformat()
+            "last_synced_at": sync_start_time
         }).eq("id", integration_id).execute()
         
         print("Gmail sync completed.")

@@ -13,6 +13,7 @@ def fetch_drive_files(integration_id: str, user_id: str):
     Only fetches files modified since the last sync.
     """
     print(f"--- Starting Drive Sync for Integration {integration_id} ---")
+    sync_start_time = datetime.datetime.now(datetime.timezone.utc).isoformat()
     
     try:
         # 1. Get Integration Credentials
@@ -49,9 +50,16 @@ def fetch_drive_files(integration_id: str, user_id: str):
         print(f"Fetching files modified after: {start_date}")
 
         # 3. List Files
-        # Query for PDF, Images, and Google Docs (exported as PDF)
+        # Query for PDF, Images, Google Docs, and Word Docs
         # mimeType != 'application/vnd.google-apps.folder' to exclude folders
-        query = f"modifiedTime > '{start_date}' and trashed = false and (mimeType = 'application/pdf' or mimeType contains 'image/')"
+        query = (
+            f"modifiedTime > '{start_date}' and trashed = false and ("
+            f"mimeType = 'application/pdf' or "
+            f"mimeType contains 'image/' or "
+            f"mimeType = 'application/vnd.google-apps.document' or "
+            f"mimeType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'"
+            f")"
+        )
         
         results = service.files().list(
             q=query,
@@ -79,7 +87,14 @@ def fetch_drive_files(integration_id: str, user_id: str):
                 continue
             
             # 4. Download File
-            request = service.files().get_media(fileId=file_id)
+            if mime_type == 'application/vnd.google-apps.document':
+                # Export Google Docs as PDF
+                request = service.files().export_media(fileId=file_id, mimeType='application/pdf')
+                file_name = f"{file_name}.pdf"
+                mime_type = 'application/pdf'
+            else:
+                request = service.files().get_media(fileId=file_id)
+
             file_content = io.BytesIO()
             downloader = MediaIoBaseDownload(file_content, request)
             
@@ -116,7 +131,7 @@ def fetch_drive_files(integration_id: str, user_id: str):
                 "name": file_name,
                 "file_path": path,
                 "type": mime_type,
-                "size": int(item.get('size', 0)),
+                "size": int(item.get('size', 0) or len(file_bytes)), # Use actual bytes if size is missing (e.g. GDocs)
                 "source": "Drive",
                 "source_date": modified_time, # Use Drive modification time
                 "status": "pending",
@@ -141,9 +156,8 @@ def fetch_drive_files(integration_id: str, user_id: str):
                 processed_count += 1
 
         # 8. Update Integration Status
-        current_time = datetime.datetime.now(datetime.timezone.utc).isoformat()
         supabase.table("user_integrations").update({
-            "last_synced_at": current_time,
+            "last_synced_at": sync_start_time,
             "sync_status": "active"
         }).eq("id", integration_id).execute()
         

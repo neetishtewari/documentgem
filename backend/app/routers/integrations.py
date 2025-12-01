@@ -148,3 +148,30 @@ def delete_integration(integration_id: str, user = Depends(get_current_user)):
         return {"message": "Integration deleted successfully"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+@router.post("/integrations/{integration_id}/sync")
+def sync_integration(
+    integration_id: str,
+    background_tasks: BackgroundTasks,
+    user = Depends(get_current_user)
+):
+    try:
+        # Verify ownership
+        response = supabase.table("user_integrations").select("*").eq("id", integration_id).eq("user_id", user.id).single().execute()
+        if not response.data:
+            raise HTTPException(status_code=404, detail="Integration not found")
+            
+        integration = response.data
+        
+        # Update status to syncing
+        supabase.table("user_integrations").update({"sync_status": "syncing"}).eq("id", integration_id).execute()
+        
+        # Trigger Background Sync
+        print(f"Manual sync triggered for integration {integration_id}")
+        background_tasks.add_task(fetch_gmail_attachments, integration_id, user.id)
+        background_tasks.add_task(fetch_drive_files, integration_id, user.id)
+        
+        return {"message": "Sync started successfully"}
+        
+    except Exception as e:
+        print(f"Sync Error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))

@@ -6,7 +6,17 @@ const api = axios.create({
 })
 
 api.interceptors.request.use(async (config) => {
-    const { data: { session } } = await supabase.auth.getSession()
+    const { data: { session }, error } = await supabase.auth.getSession()
+
+    if (error) {
+        console.error("Error getting session:", error)
+        if (error.message.includes("Refresh Token") || error.message.includes("refresh_token")) {
+            console.warn("Invalid refresh token, signing out...")
+            await supabase.auth.signOut()
+            window.location.href = "/login"
+            return config
+        }
+    }
 
     if (session?.access_token) {
         // console.log("Attaching token to request:", session.access_token.substring(0, 10) + "...")

@@ -2,7 +2,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Mail, HardDrive } from "lucide-react"
+import { Mail, HardDrive, RefreshCw } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { IntegrationConfigDialog } from "@/components/IntegrationConfigDialog"
@@ -12,10 +12,16 @@ export default function IntegrationsPage() {
     const [isGmailDialogOpen, setIsGmailDialogOpen] = useState(false)
     const [integrations, setIntegrations] = useState<any[]>([])
     const [loading, setLoading] = useState(true)
+    const [syncingIds, setSyncingIds] = useState<Set<string>>(new Set())
 
     // Fetch status on mount
     useEffect(() => {
         fetchStatus()
+        // Poll for status updates every 5 seconds if syncing
+        const interval = setInterval(() => {
+            fetchStatus()
+        }, 5000)
+        return () => clearInterval(interval)
     }, [])
 
     const fetchStatus = async () => {
@@ -41,6 +47,27 @@ export default function IntegrationsPage() {
         } catch (error) {
             console.error("Failed to disconnect:", error)
             alert("Failed to disconnect. Please try again.")
+        }
+    }
+
+    const handleSync = async (integrationId: string) => {
+        try {
+            setSyncingIds(prev => new Set(prev).add(integrationId))
+            await api.post(`/api/integrations/${integrationId}/sync`)
+            fetchStatus()
+        } catch (error) {
+            console.error("Failed to trigger sync:", error)
+            alert("Failed to start sync.")
+        } finally {
+            // We don't remove from syncingIds immediately, we let the status poll handle it
+            // or we can remove it after a timeout to re-enable the button
+            setTimeout(() => {
+                setSyncingIds(prev => {
+                    const next = new Set(prev)
+                    next.delete(integrationId)
+                    return next
+                })
+            }, 2000)
         }
     }
 
@@ -106,8 +133,11 @@ export default function IntegrationsPage() {
                         <div className="text-sm text-muted-foreground">
                             {isGmailConnected ? (
                                 <div className="space-y-2">
-                                    <p className="text-slate-700 font-medium">
-                                        Sync Status: {gmailIntegration.sync_status || 'Idle'}
+                                    <p className="text-slate-700 font-medium flex items-center gap-2">
+                                        Sync Status:
+                                        <span className={gmailIntegration.sync_status === 'syncing' ? 'text-blue-600 animate-pulse' : ''}>
+                                            {gmailIntegration.sync_status || 'Idle'}
+                                        </span>
                                     </p>
                                     {gmailIntegration.sync_status === 'scanning' || gmailIntegration.sync_status === 'syncing' ? (
                                         <div className="p-3 bg-blue-50 text-blue-700 rounded-md text-xs">
@@ -134,15 +164,26 @@ export default function IntegrationsPage() {
                             )}
                         </div>
                     </CardContent>
-                    <CardFooter>
+                    <CardFooter className="flex gap-2">
                         {isGmailConnected ? (
-                            <Button
-                                variant="outline"
-                                className="w-full text-red-600 hover:text-red-700 hover:bg-red-50"
-                                onClick={() => handleDisconnect(gmailIntegration.id)}
-                            >
-                                Disconnect
-                            </Button>
+                            <>
+                                <Button
+                                    variant="outline"
+                                    className="flex-1"
+                                    onClick={() => handleSync(gmailIntegration.id)}
+                                    disabled={gmailIntegration.sync_status === 'syncing' || syncingIds.has(gmailIntegration.id)}
+                                >
+                                    <RefreshCw className={`mr-2 h-4 w-4 ${gmailIntegration.sync_status === 'syncing' ? 'animate-spin' : ''}`} />
+                                    Sync Now
+                                </Button>
+                                <Button
+                                    variant="outline"
+                                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                    onClick={() => handleDisconnect(gmailIntegration.id)}
+                                >
+                                    Disconnect
+                                </Button>
+                            </>
                         ) : (
                             <Button className="w-full" onClick={() => setIsGmailDialogOpen(true)}>
                                 Connect Gmail
@@ -175,8 +216,11 @@ export default function IntegrationsPage() {
                         <div className="text-sm text-muted-foreground">
                             {isGmailConnected ? (
                                 <div className="space-y-2">
-                                    <p className="text-slate-700 font-medium">
-                                        Sync Status: {gmailIntegration.sync_status || 'Idle'}
+                                    <p className="text-slate-700 font-medium flex items-center gap-2">
+                                        Sync Status:
+                                        <span className={gmailIntegration.sync_status === 'syncing' ? 'text-blue-600 animate-pulse' : ''}>
+                                            {gmailIntegration.sync_status || 'Idle'}
+                                        </span>
                                     </p>
                                     <p>Last synced: {gmailIntegration.last_synced_at ? new Date(gmailIntegration.last_synced_at).toLocaleString('en-US', {
                                         day: 'numeric',
@@ -196,15 +240,26 @@ export default function IntegrationsPage() {
                             )}
                         </div>
                     </CardContent>
-                    <CardFooter>
+                    <CardFooter className="flex gap-2">
                         {isGmailConnected ? (
-                            <Button
-                                variant="outline"
-                                className="w-full text-red-600 hover:text-red-700 hover:bg-red-50"
-                                onClick={() => handleDisconnect(gmailIntegration.id)}
-                            >
-                                Disconnect
-                            </Button>
+                            <>
+                                <Button
+                                    variant="outline"
+                                    className="flex-1"
+                                    onClick={() => handleSync(gmailIntegration.id)}
+                                    disabled={gmailIntegration.sync_status === 'syncing' || syncingIds.has(gmailIntegration.id)}
+                                >
+                                    <RefreshCw className={`mr-2 h-4 w-4 ${gmailIntegration.sync_status === 'syncing' ? 'animate-spin' : ''}`} />
+                                    Sync Now
+                                </Button>
+                                <Button
+                                    variant="outline"
+                                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                    onClick={() => handleDisconnect(gmailIntegration.id)}
+                                >
+                                    Disconnect
+                                </Button>
+                            </>
                         ) : (
                             <Button className="w-full" onClick={() => setIsGmailDialogOpen(true)}>
                                 Connect Drive

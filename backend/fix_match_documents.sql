@@ -8,7 +8,8 @@ create or replace function match_documents (
   query_embedding vector(1536),
   match_threshold float,
   match_count int,
-  filter_user_id uuid
+  filter_user_id uuid,
+  filter_document_id uuid default null
 )
 returns table (
   id uuid,
@@ -29,6 +30,7 @@ begin
   join documents on documents.id = document_embeddings.document_id
   where 1 - (document_embeddings.embedding <=> query_embedding) > match_threshold
   and documents.user_id = filter_user_id
+  and (filter_document_id is null or documents.id = filter_document_id)
   order by document_embeddings.embedding <=> query_embedding
   limit match_count;
 end;
