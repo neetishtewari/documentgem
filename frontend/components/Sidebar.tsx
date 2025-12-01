@@ -9,7 +9,8 @@ import {
     Settings,
     Trash2,
     Plug,
-    Activity
+    Activity,
+    Search
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useEffect, useState } from "react";
@@ -61,6 +62,22 @@ export function Sidebar() {
 
             <div className="flex-1 overflow-y-auto py-4">
                 <nav className="space-y-6 px-4">
+                    {/* Search Trigger */}
+                    <div>
+                        <button
+                            onClick={() => document.dispatchEvent(new CustomEvent("open-command-palette"))}
+                            className="flex w-full items-center gap-3 rounded-md px-2 py-2 text-sm font-medium text-gray-300 transition-colors hover:bg-gray-800 hover:text-white group"
+                        >
+                            <div className="flex items-center gap-3 flex-1">
+                                <Search className="h-4 w-4" />
+                                <span>Search</span>
+                            </div>
+                            <kbd className="pointer-events-none hidden h-5 select-none items-center gap-1 rounded border border-gray-700 bg-gray-800 px-1.5 font-mono text-[10px] font-medium text-gray-400 opacity-100 group-hover:text-gray-300 sm:flex">
+                                <span className="text-xs">⌘</span>K
+                            </kbd>
+                        </button>
+                    </div>
+
                     {menuItems.map((section) => (
                         <div key={section.title}>
                             <h3 className="mb-2 px-2 text-xs font-semibold uppercase tracking-wider text-gray-400">
