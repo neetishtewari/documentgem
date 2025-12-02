@@ -12,6 +12,8 @@ router = APIRouter()
 
 from app.services.document_processor import process_document_ai
 
+import hashlib
+
 @router.post("/upload")
 async def upload_document(
     background_tasks: BackgroundTasks, 
@@ -19,10 +21,19 @@ async def upload_document(
     user = Depends(get_current_user)
 ):
     try:
-        # 1. Upload file to Supabase Storage
+        # 1. Read content and calculate hash
+        file_content = await file.read()
+        file_hash = hashlib.sha256(file_content).hexdigest()
+        
+        # 2. Check for duplicates
+        # We check if ANY document with this hash exists for this user, regardless of is_duplicate status
+        # If one exists, this new one is a duplicate.
+        duplicate_check = supabase.table("documents").select("id").eq("user_id", user.id).eq("content_hash", file_hash).limit(1).execute()
+        is_duplicate = len(duplicate_check.data) > 0
+
+        # 3. Upload file to Supabase Storage
         file_ext = file.filename.split(".")[-1]
         file_path = f"{user.id}/{uuid.uuid4()}.{file_ext}" # Organize by user_id
-        file_content = await file.read()
         
         # Upload to 'documents' bucket (Blocking -> Thread Pool)
         def upload_to_storage():
@@ -34,7 +45,7 @@ async def upload_document(
         
         await run_in_threadpool(upload_to_storage)
         
-        # 2. Save metadata to Database
+        # 4. Save metadata to Database
         import datetime
         document_data = {
             "name": file.filename,
@@ -44,7 +55,9 @@ async def upload_document(
             "category": "Processing...", # Initial state
             "user_id": user.id,
             "source": "Upload",
-            "source_date": datetime.datetime.now(datetime.timezone.utc).isoformat()
+            "source_date": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+            "content_hash": file_hash,
+            "is_duplicate": is_duplicate
         }
         
         # Blocking DB insert -> Thread Pool
@@ -55,10 +68,15 @@ async def upload_document(
         document = response.data[0]
         document_id = document['id']
 
-        # 3. Trigger AI Classification in Background
+        # 5. Trigger AI Classification in Background (Only if not a duplicate? Or always? 
+        # Strategy: Always process for now, user might want to keep it because it has different metadata/name)
         background_tasks.add_task(process_document_ai, document_id, file_content, file.content_type)
         
-        return {"message": "File uploaded successfully", "document": document}
+        return {
+            "message": "File uploaded successfully" + (" (Duplicate detected)" if is_duplicate else ""), 
+            "document": document,
+            "is_duplicate": is_duplicate
+        }
 
     except Exception as e:
         import traceback
@@ -73,7 +91,9 @@ def get_stats(
 ):
     try:
         # Get counts by category for the current user
-        query = supabase.table("documents").select("category").eq("user_id", user.id)
+        # Exclude duplicates from stats by default? Or keep them? 
+        # Let's exclude duplicates from general stats to avoid skewing numbers
+        query = supabase.table("documents").select("category").eq("user_id", user.id).eq("is_duplicate", False)
         
         if start_date:
             query = query.gte("created_at", start_date)
@@ -100,12 +120,13 @@ def get_documents(
     end_date: str = None,
     page: int = 1,
     limit: int = 12,
+    is_duplicate: bool = False, # Default to showing non-duplicates
     user = Depends(get_current_user)
 ):
     # Changed to sync def so FastAPI runs it in a thread pool automatically
     try:
         # Build base query
-        query = supabase.table("documents").select("*", count="exact").eq("user_id", user.id).order("created_at", desc=True)
+        query = supabase.table("documents").select("*", count="exact").eq("user_id", user.id).eq("is_duplicate", is_duplicate).order("created_at", desc=True)
         
         if category and category != "All":
             query = query.eq("category", category)
@@ -137,6 +158,29 @@ def get_documents(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@router.patch("/{document_id}")
+def update_document(
+    document_id: str, 
+    update_data: dict, 
+    user = Depends(get_current_user)
+):
+    try:
+        # Sanitize update_data - only allow specific fields
+        allowed_fields = ["name", "category", "is_duplicate"]
+        data_to_update = {k: v for k, v in update_data.items() if k in allowed_fields}
+        
+        if not data_to_update:
+            raise HTTPException(status_code=400, detail="No valid fields to update")
+
+        response = supabase.table("documents").update(data_to_update).eq("id", document_id).eq("user_id", user.id).execute()
+        
+        if not response.data:
+            raise HTTPException(status_code=404, detail="Document not found")
+            
+        return response.data[0]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @router.delete("/{document_id}")
 def delete_document(document_id: str, user = Depends(get_current_user)):
     try:
@@ -161,3 +205,52 @@ def delete_document(document_id: str, user = Depends(get_current_user)):
         print(f"Delete Error: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
+@router.post("/backfill-hashes")
+async def backfill_hashes(user = Depends(get_current_user)):
+    try:
+        # 1. Get ALL documents for this user (to re-evaluate duplicate status)
+        response = supabase.table("documents").select("*").eq("user_id", user.id).execute()
+        documents = response.data
+        
+        updated_count = 0
+        duplicates_found = 0
+        
+        for doc in documents:
+            try:
+                file_hash = doc.get("content_hash")
+                
+                # 2. Calculate Hash if missing
+                if not file_hash:
+                    # Download file content
+                    file_path = doc["file_path"]
+                    file_data = supabase.storage.from_("documents").download(file_path)
+                    file_hash = hashlib.sha256(file_data).hexdigest()
+                
+                # 3. Check for duplicates (excluding self)
+                # Check if there is an OLDER document with the same hash
+                dup_check = supabase.table("documents").select("id").eq("user_id", user.id).eq("content_hash", file_hash).lt("created_at", doc["created_at"]).limit(1).execute()
+                is_duplicate = len(dup_check.data) > 0
+                
+                if is_duplicate:
+                    duplicates_found += 1
+                
+                # 4. Update Document
+                supabase.table("documents").update({
+                    "content_hash": file_hash,
+                    "is_duplicate": is_duplicate
+                }).eq("id", doc["id"]).execute()
+                
+                updated_count += 1
+                
+            except Exception as inner_e:
+                print(f"Error processing doc {doc['id']}: {inner_e}")
+                continue
+                
+        return {
+            "message": "Backfill complete",
+            "processed": updated_count,
+            "duplicates_flagged": duplicates_found
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

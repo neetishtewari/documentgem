@@ -1,8 +1,9 @@
+
 "use client"
 
 import { useEffect, useState } from "react"
 import Link from "next/link"
-import { LayoutGrid, List as ListIcon, FileText, Mail, UploadCloud } from "lucide-react"
+import { LayoutGrid, List as ListIcon, FileText, Mail, UploadCloud, RefreshCw } from "lucide-react"
 import { DocumentTable } from "./DocumentTable"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
@@ -27,6 +28,7 @@ interface Document {
     metadata?: any
     source?: string
     source_date?: string
+    is_duplicate?: boolean
 }
 
 interface DocumentListProps {
@@ -39,6 +41,7 @@ export function DocumentList({ refreshTrigger, dateRange }: DocumentListProps) {
     const [loading, setLoading] = useState(true)
     const [filter, setFilter] = useState("All")
     const [viewMode, setViewMode] = useState<"grid" | "table">("grid")
+    const [showDuplicates, setShowDuplicates] = useState(false)
 
     // Pagination State
     const [currentPage, setCurrentPage] = useState(1)
@@ -49,45 +52,68 @@ export function DocumentList({ refreshTrigger, dateRange }: DocumentListProps) {
     useEffect(() => {
         // Reset to page 1 when filters change
         setCurrentPage(1)
-    }, [filter, dateRange])
+    }, [filter, dateRange, showDuplicates])
+
+    const fetchDocuments = async () => {
+        try {
+            setLoading(true)
+            let url = "/api/documents/"
+            const params = new URLSearchParams()
+
+            if (filter !== "All" && !showDuplicates) params.append("category", filter)
+            if (dateRange?.from) params.append("start_date", dateRange.from.toISOString())
+            if (dateRange?.to) params.append("end_date", dateRange.to.toISOString())
+
+            // Add Pagination Params
+            params.append("page", currentPage.toString())
+            params.append("limit", limit.toString())
+
+            // Add Duplicate Filter
+            params.append("is_duplicate", showDuplicates.toString())
+
+            if (params.toString()) url += `?${params.toString()}`
+
+            const response = await api.get(url)
+
+            // Handle new response format
+            if (response.data.data) {
+                setDocuments(response.data.data)
+                setTotalPages(response.data.total_pages)
+                setTotalDocs(response.data.total)
+            } else {
+                // Fallback for old format (just in case)
+                setDocuments(response.data)
+            }
+        } catch (error) {
+            console.error("Failed to fetch documents:", error)
+        } finally {
+            setLoading(false)
+        }
+    }
 
     useEffect(() => {
-        const fetchDocuments = async () => {
-            try {
-                setLoading(true)
-                let url = "/api/documents/"
-                const params = new URLSearchParams()
-
-                if (filter !== "All") params.append("category", filter)
-                if (dateRange?.from) params.append("start_date", dateRange.from.toISOString())
-                if (dateRange?.to) params.append("end_date", dateRange.to.toISOString())
-
-                // Add Pagination Params
-                params.append("page", currentPage.toString())
-                params.append("limit", limit.toString())
-
-                if (params.toString()) url += `?${params.toString()}`
-
-                const response = await api.get(url)
-
-                // Handle new response format
-                if (response.data.data) {
-                    setDocuments(response.data.data)
-                    setTotalPages(response.data.total_pages)
-                    setTotalDocs(response.data.total)
-                } else {
-                    // Fallback for old format (just in case)
-                    setDocuments(response.data)
-                }
-            } catch (error) {
-                console.error("Failed to fetch documents:", error)
-            } finally {
-                setLoading(false)
-            }
-        }
-
         fetchDocuments()
-    }, [refreshTrigger, filter, dateRange, currentPage])
+    }, [refreshTrigger, filter, dateRange, currentPage, showDuplicates])
+
+    const handleKeepDuplicate = async (docId: string) => {
+        try {
+            await api.patch(`/ api / documents / ${docId} `, { is_duplicate: false })
+            // Refresh list
+            fetchDocuments()
+        } catch (error) {
+            console.error("Failed to keep duplicate:", error)
+        }
+    }
+
+    const handleDeleteDuplicate = async (docId: string) => {
+        try {
+            await api.delete(`/ api / documents / ${docId} `)
+            // Refresh list
+            fetchDocuments()
+        } catch (error) {
+            console.error("Failed to delete duplicate:", error)
+        }
+    }
 
     const categories = ["All", "Invoice", "Receipt", "Contract", "Policy", "Other"]
 
@@ -103,28 +129,47 @@ export function DocumentList({ refreshTrigger, dateRange }: DocumentListProps) {
         <div className="space-y-6">
             <div className="flex items-center justify-between">
                 <div className="flex items-baseline gap-2">
-                    <h2 className="text-xl font-semibold tracking-tight text-slate-900">Your Documents</h2>
+                    <h2 className="text-xl font-semibold tracking-tight text-slate-900">
+                        {showDuplicates ? "Potential Duplicates" : "Your Documents"}
+                    </h2>
                     <span className="text-sm text-slate-500">({totalDocs} total)</span>
                 </div>
                 <div className="flex items-center gap-4">
-                    <div className="flex gap-1 bg-slate-100/80 p-1 rounded-xl">
-                        {categories.map((cat) => (
-                            <Button
-                                key={cat}
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => setFilter(cat)}
-                                className={cn(
-                                    "rounded-lg px-3 py-1.5 text-xs font-medium transition-all duration-200 hover:bg-white/50",
-                                    filter === cat
-                                        ? "bg-white text-slate-900 shadow-sm ring-1 ring-black/5"
-                                        : "text-slate-500 hover:text-slate-900"
-                                )}
-                            >
-                                {cat}
-                            </Button>
-                        ))}
-                    </div>
+                    {/* Duplicates Toggle */}
+                    <Button
+                        variant={showDuplicates ? "destructive" : "outline"}
+                        size="sm"
+                        onClick={() => setShowDuplicates(!showDuplicates)}
+                        className={cn(
+                            "gap-2 transition-all",
+                            showDuplicates ? "bg-red-50 text-red-600 hover:bg-red-100 border-red-200" : "text-slate-600"
+                        )}
+                    >
+                        <FileText className="h-4 w-4" />
+                        {showDuplicates ? "Show All Documents" : "Review Duplicates"}
+                    </Button>
+
+                    {!showDuplicates && (
+                        <div className="flex gap-1 bg-slate-100/80 p-1 rounded-xl">
+                            {categories.map((cat) => (
+                                <Button
+                                    key={cat}
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => setFilter(cat)}
+                                    className={cn(
+                                        "rounded-lg px-3 py-1.5 text-xs font-medium transition-all duration-200 hover:bg-white/50",
+                                        filter === cat
+                                            ? "bg-white text-slate-900 shadow-sm ring-1 ring-black/5"
+                                            : "text-slate-500 hover:text-slate-900"
+                                    )}
+                                >
+                                    {cat}
+                                </Button>
+                            ))}
+                        </div>
+                    )}
+
                     <div className="flex gap-1 bg-slate-100/80 p-1 rounded-xl">
                         <Button
                             variant="ghost"
@@ -167,63 +212,102 @@ export function DocumentList({ refreshTrigger, dateRange }: DocumentListProps) {
                     <div className="rounded-full bg-white p-4 shadow-sm mb-4">
                         <FileText className="h-8 w-8 text-slate-400" />
                     </div>
-                    <h3 className="text-lg font-semibold text-slate-900">No documents found</h3>
-                    <p className="text-sm text-slate-500 mt-1">Try adjusting your filters or upload a new document</p>
+                    <h3 className="text-lg font-semibold text-slate-900">
+                        {showDuplicates ? "No duplicates found" : "No documents found"}
+                    </h3>
+                    <p className="text-sm text-slate-500 mt-1">
+                        {showDuplicates ? "Your library is clean!" : "Try adjusting your filters or upload a new document"}
+                    </p>
                 </div>
             ) : viewMode === "table" ? (
                 <DocumentTable documents={documents} category={filter} />
             ) : (
                 <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                     {documents.map((doc) => (
-                        <Link key={doc.id} href={`/documents/${doc.id}`}>
-                            <Card className="group relative h-full overflow-hidden border-none bg-white shadow-sm shadow-slate-200/50 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-slate-200/40">
-                                <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-transparent via-blue-500/20 to-transparent opacity-0 transition-opacity group-hover:opacity-100" />
-                                <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
-                                    <div className="flex items-start gap-4">
-                                        <div className="rounded-xl bg-blue-50 p-3 transition-colors group-hover:bg-blue-100/80 relative">
-                                            <FileText className="h-6 w-6 text-blue-600" />
-                                            {doc.source === 'Gmail' && (
-                                                <div className="absolute -bottom-1 -right-1 bg-white rounded-full p-0.5 shadow-sm border border-slate-100">
-                                                    <Mail className="h-3 w-3 text-red-500" />
-                                                </div>
-                                            )}
-                                            {doc.source === 'Upload' && (
-                                                <div className="absolute -bottom-1 -right-1 bg-white rounded-full p-0.5 shadow-sm border border-slate-100">
-                                                    <UploadCloud className="h-3 w-3 text-slate-500" />
-                                                </div>
-                                            )}
+                        <div key={doc.id} className="relative group h-full">
+                            <Link href={`/ documents / ${doc.id} `}>
+                                <Card className={cn(
+                                    "group relative h-full overflow-hidden border-none bg-white shadow-sm shadow-slate-200/50 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-slate-200/40",
+                                    doc.is_duplicate && "ring-2 ring-red-100 bg-red-50/30"
+                                )}>
+                                    <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-transparent via-blue-500/20 to-transparent opacity-0 transition-opacity group-hover:opacity-100" />
+                                    <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
+                                        <div className="flex items-start gap-4">
+                                            <div className="rounded-xl bg-blue-50 p-3 transition-colors group-hover:bg-blue-100/80 relative">
+                                                <FileText className="h-6 w-6 text-blue-600" />
+                                                {doc.source === 'Gmail' && (
+                                                    <div className="absolute -bottom-1 -right-1 bg-white rounded-full p-0.5 shadow-sm border border-slate-100">
+                                                        <Mail className="h-3 w-3 text-red-500" />
+                                                    </div>
+                                                )}
+                                                {doc.source === 'Upload' && (
+                                                    <div className="absolute -bottom-1 -right-1 bg-white rounded-full p-0.5 shadow-sm border border-slate-100">
+                                                        <UploadCloud className="h-3 w-3 text-slate-500" />
+                                                    </div>
+                                                )}
+                                            </div>
+                                            <div className="space-y-1.5">
+                                                <CardTitle className="text-base font-semibold leading-none tracking-tight text-slate-900 line-clamp-1" title={doc.name}>
+                                                    {doc.name}
+                                                </CardTitle>
+                                                <CardDescription className="text-xs font-medium text-slate-500">
+                                                    {new Date(doc.source_date || doc.created_at).toLocaleDateString(undefined, {
+                                                        month: 'short',
+                                                        day: 'numeric',
+                                                        year: 'numeric'
+                                                    })}
+                                                    <span className="mx-1">•</span>
+                                                    {doc.source || 'Upload'}
+                                                </CardDescription>
+                                            </div>
                                         </div>
-                                        <div className="space-y-1.5">
-                                            <CardTitle className="text-base font-semibold leading-none tracking-tight text-slate-900 line-clamp-1" title={doc.name}>
-                                                {doc.name}
-                                            </CardTitle>
-                                            <CardDescription className="text-xs font-medium text-slate-500">
-                                                {new Date(doc.source_date || doc.created_at).toLocaleDateString(undefined, {
-                                                    month: 'short',
-                                                    day: 'numeric',
-                                                    year: 'numeric'
-                                                })}
-                                                <span className="mx-1">•</span>
-                                                {doc.source || 'Upload'}
-                                            </CardDescription>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <div className="mt-4 flex items-center justify-between border-t border-slate-50 pt-4">
+                                            <span className={cn(
+                                                "inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-bold tracking-wide uppercase",
+                                                "bg-slate-100 text-slate-600 group-hover:bg-blue-50 group-hover:text-blue-700 transition-colors"
+                                            )}>
+                                                {doc.category || "Uncategorized"}
+                                            </span>
+                                            <div className="text-[11px] font-medium text-slate-400">
+                                                {(doc.size / 1024).toFixed(0)} KB
+                                            </div>
                                         </div>
+                                    </CardContent>
+                                </Card>
+                            </Link>
+
+                            {/* Duplicate Actions Overlay */}
+                            {showDuplicates && (
+                                <div className="absolute inset-0 bg-white/80 backdrop-blur-[2px] flex flex-col items-center justify-center gap-3 opacity-0 group-hover:opacity-100 transition-opacity z-10 rounded-xl">
+                                    <p className="text-sm font-medium text-slate-700">Duplicate Detected</p>
+                                    <div className="flex gap-2">
+                                        <Button
+                                            size="sm"
+                                            variant="default"
+                                            className="bg-blue-600 hover:bg-blue-700"
+                                            onClick={(e) => {
+                                                e.preventDefault()
+                                                handleKeepDuplicate(doc.id)
+                                            }}
+                                        >
+                                            Keep
+                                        </Button>
+                                        <Button
+                                            size="sm"
+                                            variant="destructive"
+                                            onClick={(e) => {
+                                                e.preventDefault()
+                                                handleDeleteDuplicate(doc.id)
+                                            }}
+                                        >
+                                            Delete
+                                        </Button>
                                     </div>
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="mt-4 flex items-center justify-between border-t border-slate-50 pt-4">
-                                        <span className={cn(
-                                            "inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-bold tracking-wide uppercase",
-                                            "bg-slate-100 text-slate-600 group-hover:bg-blue-50 group-hover:text-blue-700 transition-colors"
-                                        )}>
-                                            {doc.category || "Uncategorized"}
-                                        </span>
-                                        <div className="text-[11px] font-medium text-slate-400">
-                                            {(doc.size / 1024).toFixed(0)} KB
-                                        </div>
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        </Link>
+                                </div>
+                            )}
+                        </div>
                     ))}
                 </div>
             )}
