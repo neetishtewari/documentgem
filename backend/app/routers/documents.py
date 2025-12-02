@@ -98,11 +98,14 @@ def get_documents(
     category: str = None, 
     start_date: str = None,
     end_date: str = None,
+    page: int = 1,
+    limit: int = 12,
     user = Depends(get_current_user)
 ):
     # Changed to sync def so FastAPI runs it in a thread pool automatically
     try:
-        query = supabase.table("documents").select("*").eq("user_id", user.id).order("created_at", desc=True)
+        # Build base query
+        query = supabase.table("documents").select("*", count="exact").eq("user_id", user.id).order("created_at", desc=True)
         
         if category and category != "All":
             query = query.eq("category", category)
@@ -112,8 +115,25 @@ def get_documents(
         if end_date:
             query = query.lte("created_at", end_date)
             
+        # Pagination
+        start = (page - 1) * limit
+        end = start + limit - 1
+        
+        query = query.range(start, end)
+            
         response = query.execute()
-        return response.data
+        
+        total_count = response.count if response.count is not None else 0
+        import math
+        total_pages = math.ceil(total_count / limit) if limit > 0 else 0
+        
+        return {
+            "data": response.data,
+            "total": total_count,
+            "page": page,
+            "limit": limit,
+            "total_pages": total_pages
+        }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

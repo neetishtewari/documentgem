@@ -40,10 +40,21 @@ export function DocumentList({ refreshTrigger, dateRange }: DocumentListProps) {
     const [filter, setFilter] = useState("All")
     const [viewMode, setViewMode] = useState<"grid" | "table">("grid")
 
+    // Pagination State
+    const [currentPage, setCurrentPage] = useState(1)
+    const [totalPages, setTotalPages] = useState(1)
+    const [totalDocs, setTotalDocs] = useState(0)
+    const limit = 12
+
+    useEffect(() => {
+        // Reset to page 1 when filters change
+        setCurrentPage(1)
+    }, [filter, dateRange])
+
     useEffect(() => {
         const fetchDocuments = async () => {
             try {
-                setLoading(true) // Set loading to true when fetching new data
+                setLoading(true)
                 let url = "/api/documents/"
                 const params = new URLSearchParams()
 
@@ -51,10 +62,23 @@ export function DocumentList({ refreshTrigger, dateRange }: DocumentListProps) {
                 if (dateRange?.from) params.append("start_date", dateRange.from.toISOString())
                 if (dateRange?.to) params.append("end_date", dateRange.to.toISOString())
 
+                // Add Pagination Params
+                params.append("page", currentPage.toString())
+                params.append("limit", limit.toString())
+
                 if (params.toString()) url += `?${params.toString()}`
 
                 const response = await api.get(url)
-                setDocuments(response.data)
+
+                // Handle new response format
+                if (response.data.data) {
+                    setDocuments(response.data.data)
+                    setTotalPages(response.data.total_pages)
+                    setTotalDocs(response.data.total)
+                } else {
+                    // Fallback for old format (just in case)
+                    setDocuments(response.data)
+                }
             } catch (error) {
                 console.error("Failed to fetch documents:", error)
             } finally {
@@ -63,14 +87,25 @@ export function DocumentList({ refreshTrigger, dateRange }: DocumentListProps) {
         }
 
         fetchDocuments()
-    }, [refreshTrigger, filter, dateRange])
+    }, [refreshTrigger, filter, dateRange, currentPage])
 
     const categories = ["All", "Invoice", "Receipt", "Contract", "Policy", "Other"]
+
+    const handlePageChange = (newPage: number) => {
+        if (newPage >= 1 && newPage <= totalPages) {
+            setCurrentPage(newPage)
+            // Scroll to top of list
+            window.scrollTo({ top: 0, behavior: 'smooth' })
+        }
+    }
 
     return (
         <div className="space-y-6">
             <div className="flex items-center justify-between">
-                <h2 className="text-xl font-semibold tracking-tight text-slate-900">Your Documents</h2>
+                <div className="flex items-baseline gap-2">
+                    <h2 className="text-xl font-semibold tracking-tight text-slate-900">Your Documents</h2>
+                    <span className="text-sm text-slate-500">({totalDocs} total)</span>
+                </div>
                 <div className="flex items-center gap-4">
                     <div className="flex gap-1 bg-slate-100/80 p-1 rounded-xl">
                         {categories.map((cat) => (
@@ -190,6 +225,31 @@ export function DocumentList({ refreshTrigger, dateRange }: DocumentListProps) {
                             </Card>
                         </Link>
                     ))}
+                </div>
+            )}
+
+            {/* Pagination Controls */}
+            {documents.length > 0 && (
+                <div className="flex items-center justify-center gap-4 pt-8">
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handlePageChange(currentPage - 1)}
+                        disabled={currentPage === 1 || loading}
+                    >
+                        Previous
+                    </Button>
+                    <span className="text-sm font-medium text-slate-600">
+                        Page {currentPage} of {totalPages}
+                    </span>
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handlePageChange(currentPage + 1)}
+                        disabled={currentPage === totalPages || loading}
+                    >
+                        Next
+                    </Button>
                 </div>
             )}
         </div>
