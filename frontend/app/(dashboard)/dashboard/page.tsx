@@ -54,12 +54,12 @@ export default function Home() {
           </div>
         </div>
 
-        <DashboardAlerts />
         <DashboardStats refreshTrigger={refreshTrigger} dateRange={dateRange} />
 
         <div className="grid gap-8 md:grid-cols-[300px_1fr]">
           <div className="space-y-4">
             <UploadZone onUploadComplete={handleUploadComplete} />
+            <DashboardAlerts />
           </div>
           <div className="space-y-4">
             <DocumentList refreshTrigger={refreshTrigger} dateRange={dateRange} />
