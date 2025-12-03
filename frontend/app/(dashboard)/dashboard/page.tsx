@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation"
 import { DocumentList } from "@/components/DocumentList"
 import { UploadZone } from "@/components/UploadZone"
 import { DashboardStats } from "@/components/DashboardStats"
+import { DashboardAlerts } from "@/components/DashboardAlerts"
 import { GlobalChat } from "@/components/GlobalChat"
 import { Button } from "@/components/ui/button"
 import { DateFilter, DateRange } from "@/components/DateFilter"
@@ -53,6 +54,7 @@ export default function Home() {
           </div>
         </div>
 
+        <DashboardAlerts />
         <DashboardStats refreshTrigger={refreshTrigger} dateRange={dateRange} />
 
         <div className="grid gap-8 md:grid-cols-[300px_1fr]">

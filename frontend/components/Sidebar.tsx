@@ -2,16 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import {
-    LayoutDashboard,
-    FileText,
-    BarChart3,
-    Settings,
-    Trash2,
-    Plug,
-    Activity,
-    Search
-} from "lucide-react";
+import { LayoutDashboard, FileText, Settings, LogOut, Search, BarChart3, Activity, Plug, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
@@ -20,14 +11,14 @@ const menuItems = [
     {
         title: "Main",
         items: [
-            { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-            { name: "Insights", href: "/insights", icon: BarChart3 },
+            { name: "Documents", href: "/dashboard", icon: FileText },
+            { name: "Analytics", href: "/analytics", icon: BarChart3 },
+            { name: "Integrations", href: "/integrations", icon: Settings },
         ],
     },
     {
         title: "Connections",
         items: [
-            { name: "Integrations", href: "/integrations", icon: Plug },
             { name: "Activity Log", href: "/activity", icon: Activity },
         ],
     },
