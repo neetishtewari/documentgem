@@ -97,7 +97,7 @@ export function DocumentList({ refreshTrigger, dateRange }: DocumentListProps) {
 
     const handleKeepDuplicate = async (docId: string) => {
         try {
-            await api.patch(`/ api / documents / ${docId} `, { is_duplicate: false })
+            await api.patch(`/api/documents/${docId}`, { is_duplicate: false })
             // Refresh list
             fetchDocuments()
         } catch (error) {
@@ -107,7 +107,7 @@ export function DocumentList({ refreshTrigger, dateRange }: DocumentListProps) {
 
     const handleDeleteDuplicate = async (docId: string) => {
         try {
-            await api.delete(`/ api / documents / ${docId} `)
+            await api.delete(`/api/documents/${docId}`)
             // Refresh list
             fetchDocuments()
         } catch (error) {
@@ -225,7 +225,7 @@ export function DocumentList({ refreshTrigger, dateRange }: DocumentListProps) {
                 <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                     {documents.map((doc) => (
                         <div key={doc.id} className="relative group h-full">
-                            <Link href={`/ documents / ${doc.id} `}>
+                            <Link href={`/documents/${doc.id}`}>
                                 <Card className={cn(
                                     "group relative h-full overflow-hidden border-none bg-white shadow-sm shadow-slate-200/50 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-slate-200/40",
                                     doc.is_duplicate && "ring-2 ring-red-100 bg-red-50/30"
