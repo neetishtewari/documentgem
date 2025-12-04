@@ -92,7 +92,10 @@ async def classify_document(file_content: bytes, file_type: str) -> dict:
                                "    - 'amounts': List of objects {'label': str, 'value': str, 'currency': str} (e.g., {'label': 'Total', 'value': '100.00', 'currency': 'USD'})\n"
                                "    - 'entities': List of names, companies, or organizations\n"
                                "    - 'invoice_number': If applicable\n"
+                               "    - 'po_number': Purchase Order Number (if found)\n"
+                               "    - 'vendor_name': Name of the vendor/supplier (normalized)\n"
                                "    - 'contract_parties': If applicable\n"
+                               "    - 'line_items': List of items/services purchased (description, quantity, price)\n"
                                "    - 'action_items': List of required actions\n"
                 },
                 {

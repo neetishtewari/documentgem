@@ -66,6 +66,21 @@ export function DashboardAlerts() {
         return null
     }
 
+    const getIconColor = (type: string) => {
+        switch (type) {
+            case 'compliance_mismatch':
+                return 'text-red-600'
+            case 'expiry':
+            case 'missing_signature':
+                return 'text-orange-500'
+            case 'high_value':
+            case 'auto_renewal':
+                return 'text-yellow-600'
+            default:
+                return 'text-blue-500'
+        }
+    }
+
     const displayedAlerts = alerts.slice(0, 5)
 
     return (
@@ -106,10 +121,10 @@ export function DashboardAlerts() {
             <CardContent className="space-y-3">
                 {displayedAlerts.map(alert => (
                     <div key={alert.id} className="flex items-start gap-3 text-sm border-b border-slate-100 pb-3 last:border-0 last:pb-0">
-                        <AlertCircle className="h-4 w-4 text-red-500 mt-0.5 shrink-0" />
+                        <AlertCircle className={`h-4 w-4 mt-0.5 shrink-0 ${getIconColor(alert.type)}`} />
                         <div className="flex-1 space-y-1">
-                            <p className="leading-tight text-slate-700">{alert.message}</p>
-                            <p className="text-xs text-muted-foreground capitalize">{alert.type}</p>
+                            <p className="leading-tight text-slate-700 line-clamp-2">{alert.message}</p>
+                            <p className="text-xs text-muted-foreground capitalize">{alert.type.replace('_', ' ')}</p>
                         </div>
                         <button
                             onClick={() => handleDismiss(alert.id)}
@@ -125,12 +140,29 @@ export function DashboardAlerts() {
 }
 
 function AlertItemView({ alert, onDismiss }: { alert: AlertItem, onDismiss: (id: string) => void }) {
+    const getIconColor = (type: string) => {
+        switch (type) {
+            case 'compliance_mismatch':
+                return 'text-red-600'
+            case 'expiry':
+            case 'missing_signature':
+                return 'text-orange-500'
+            case 'high_value':
+            case 'auto_renewal':
+                return 'text-yellow-600'
+            default:
+                return 'text-blue-500'
+        }
+    }
+
     return (
-        <Alert variant={alert.type === 'expiry' ? 'destructive' : 'default'} className="bg-white shadow-sm">
-            <AlertCircle className="h-4 w-4" />
-            <AlertTitle className="ml-2 capitalize">{alert.type} Alert</AlertTitle>
+        <Alert className="bg-white shadow-sm border-l-4 border-l-transparent">
+            <AlertCircle className={`h-4 w-4 ${getIconColor(alert.type)}`} />
+            <AlertTitle className="ml-2 capitalize flex items-center gap-2">
+                {alert.type.replace('_', ' ')} Alert
+            </AlertTitle>
             <AlertDescription className="ml-2 flex items-center justify-between w-full">
-                <span>{alert.message}</span>
+                <span className="text-slate-700">{alert.message}</span>
                 <Button
                     variant="ghost"
                     size="sm"
