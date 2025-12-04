@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useRef, useEffect } from "react"
-import { Send, Bot, X, Loader2, Sparkles } from "lucide-react"
+import { Send, Bot, X, Loader2, Sparkles, Mic } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
@@ -21,6 +21,7 @@ export function GlobalChat({ isOpen, onClose }: GlobalChatProps) {
     const [messages, setMessages] = useState<Message[]>([])
     const [input, setInput] = useState("")
     const [loading, setLoading] = useState(false)
+    const [isListening, setIsListening] = useState(false)
     const scrollRef = useRef<HTMLDivElement>(null)
 
     useEffect(() => {
@@ -30,6 +31,31 @@ export function GlobalChat({ isOpen, onClose }: GlobalChatProps) {
     }, [messages])
 
     if (!isOpen) return null
+
+    const startListening = () => {
+        if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+            // @ts-ignore
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
+            const recognition = new SpeechRecognition()
+
+            recognition.onstart = () => {
+                setIsListening(true)
+            }
+
+            recognition.onend = () => {
+                setIsListening(false)
+            }
+
+            recognition.onresult = (event: any) => {
+                const transcript = event.results[0][0].transcript
+                setInput(transcript)
+            }
+
+            recognition.start()
+        } else {
+            alert("Speech recognition is not supported in this browser.")
+        }
+    }
 
     const handleSend = async () => {
         if (!input.trim() || loading) return
@@ -114,9 +140,18 @@ export function GlobalChat({ isOpen, onClose }: GlobalChatProps) {
                 </CardContent>
                 <div className="border-t p-3">
                     <div className="flex gap-2">
+                        <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={startListening}
+                            className={cn(isListening && "text-red-500 animate-pulse bg-red-50")}
+                            title="Voice Search"
+                        >
+                            <Mic className="h-4 w-4" />
+                        </Button>
                         <input
                             className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
-                            placeholder="Ask a question across all documents..."
+                            placeholder={isListening ? "Listening..." : "Ask a question across all documents..."}
                             value={input}
                             onChange={(e) => setInput(e.target.value)}
                             onKeyDown={handleKeyDown}
