@@ -63,7 +63,7 @@ def google_auth_callback(request: Request, code: str, state: str = None):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.post("/integrations/google/connect")
+@router.post("/google/connect")
 def connect_google(
     payload: dict,
     background_tasks: BackgroundTasks,
@@ -126,7 +126,7 @@ def connect_google(
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.get("/integrations/status")
+@router.get("/status")
 def get_integrations_status(user = Depends(get_current_user)):
     try:
         response = supabase.table("user_integrations").select("*").eq("user_id", user.id).execute()
@@ -134,7 +134,7 @@ def get_integrations_status(user = Depends(get_current_user)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.delete("/integrations/{integration_id}")
+@router.delete("/{integration_id}")
 def delete_integration(integration_id: str, user = Depends(get_current_user)):
     try:
         # Verify ownership
@@ -148,7 +148,7 @@ def delete_integration(integration_id: str, user = Depends(get_current_user)):
         return {"message": "Integration deleted successfully"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-@router.post("/integrations/{integration_id}/sync")
+@router.post("/{integration_id}/sync")
 def sync_integration(
     integration_id: str,
     background_tasks: BackgroundTasks,

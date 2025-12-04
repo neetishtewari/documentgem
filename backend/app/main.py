@@ -28,8 +28,9 @@ app.include_router(integrations.router, prefix="/api/integrations", tags=["integ
 app.include_router(analytics.router, prefix="/api/analytics", tags=["analytics"])
 app.include_router(search.router, prefix="/api", tags=["search"])
 
-from app.routers import settings
+from app.routers import settings, activity
 app.include_router(settings.router, prefix="/api/settings", tags=["settings"])
+app.include_router(activity.router, prefix="/api/activity", tags=["activity"])
 
 from app.services.scheduler import start_scheduler
 

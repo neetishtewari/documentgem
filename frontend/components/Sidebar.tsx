@@ -34,15 +34,36 @@ const menuItems = [
 export function Sidebar() {
     const pathname = usePathname();
     const [userEmail, setUserEmail] = useState<string>("user@example.com");
+    const [hasDisconnectedIntegrations, setHasDisconnectedIntegrations] = useState(false);
 
     useEffect(() => {
-        const getUser = async () => {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (user?.email) {
-                setUserEmail(user.email);
+        const checkIntegrations = async () => {
+            try {
+                const { data: { user } } = await supabase.auth.getUser();
+                if (user) {
+                    setUserEmail(user.email || "");
+
+                    // Check for disconnected integrations
+                    const { data } = await supabase
+                        .from("user_integrations")
+                        .select("sync_status")
+                        .eq("user_id", user.id)
+                        .eq("sync_status", "disconnected");
+
+                    if (data && data.length > 0) {
+                        setHasDisconnectedIntegrations(true);
+                    }
+                }
+            } catch (error) {
+                console.error("Failed to check integrations:", error);
             }
         };
-        getUser();
+        checkIntegrations();
+
+        // Listen for custom event to update status (optional, if we want real-time update from other components)
+        const handleUpdate = () => checkIntegrations();
+        window.addEventListener("integration-status-update", handleUpdate);
+        return () => window.removeEventListener("integration-status-update", handleUpdate);
     }, []);
 
     return (
@@ -82,7 +103,7 @@ export function Sidebar() {
                                             key={item.href}
                                             href={item.href}
                                             className={cn(
-                                                "flex items-center gap-3 rounded-md px-2 py-2 text-sm font-medium transition-colors",
+                                                "flex items-center gap-3 rounded-md px-2 py-2 text-sm font-medium transition-colors relative",
                                                 isActive
                                                     ? "bg-[var(--primary)] text-white"
                                                     : "text-gray-300 hover:bg-gray-800 hover:text-white"
@@ -90,6 +111,9 @@ export function Sidebar() {
                                         >
                                             <item.icon className="h-4 w-4" />
                                             {item.name}
+                                            {item.name === "Integrations" && hasDisconnectedIntegrations && (
+                                                <span className="absolute right-2 top-1/2 -translate-y-1/2 h-2 w-2 rounded-full bg-red-500 animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.6)]" />
+                                            )}
                                         </Link>
                                     );
                                 })}
@@ -102,7 +126,7 @@ export function Sidebar() {
             <div className="border-t border-gray-800 p-4">
                 <div className="flex items-center gap-3 rounded-md bg-gray-900/50 p-3">
                     <div className="h-8 w-8 rounded-full bg-gray-700 flex items-center justify-center text-xs font-medium text-white">
-                        {userEmail[0].toUpperCase()}
+                        {userEmail[0]?.toUpperCase()}
                     </div>
                     <div className="flex flex-col overflow-hidden">
                         <span className="text-sm font-medium text-white truncate">User</span>
@@ -113,3 +137,4 @@ export function Sidebar() {
         </div>
     );
 }
+

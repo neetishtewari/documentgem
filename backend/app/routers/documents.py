@@ -126,7 +126,8 @@ def get_documents(
     # Changed to sync def so FastAPI runs it in a thread pool automatically
     try:
         # Build base query
-        query = supabase.table("documents").select("*", count="exact").eq("user_id", user.id).eq("is_duplicate", is_duplicate).order("created_at", desc=True)
+        # Filter out deleted documents (deleted_at is null)
+        query = supabase.table("documents").select("*", count="exact").eq("user_id", user.id).eq("is_duplicate", is_duplicate).is_("deleted_at", "null").order("created_at", desc=True)
         
         if category and category != "All":
             query = query.eq("category", category)
@@ -158,6 +159,17 @@ def get_documents(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@router.get("/trash")
+def get_trash(user = Depends(get_current_user)):
+    """
+    Get all soft-deleted documents.
+    """
+    try:
+        response = supabase.table("documents").select("*").eq("user_id", user.id).not_.is_("deleted_at", "null").order("deleted_at", desc=True).execute()
+        return response.data
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @router.patch("/{document_id}")
 def update_document(
     document_id: str, 
@@ -182,7 +194,64 @@ def update_document(
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.delete("/{document_id}")
-def delete_document(document_id: str, user = Depends(get_current_user)):
+async def delete_document(document_id: str, user = Depends(get_current_user)):
+    """
+    Soft delete a document (move to trash).
+    """
+    try:
+        # 1. Verify ownership
+        response = supabase.table("documents").select("*").eq("id", document_id).eq("user_id", user.id).single().execute()
+        if not response.data:
+            raise HTTPException(status_code=404, detail="Document not found")
+        
+        doc = response.data
+        
+        # 2. Soft Delete (Set deleted_at)
+        import datetime
+        now = datetime.datetime.now(datetime.timezone.utc).isoformat()
+        
+        supabase.table("documents").update({"deleted_at": now}).eq("id", document_id).execute()
+        
+        # 3. Log Activity
+        from app.services.activity_service import log_activity
+        await log_activity(user.id, "DELETE", "DOCUMENT", document_id, {"name": doc.get("name")})
+        
+        return {"message": "Document moved to trash"}
+
+    except Exception as e:
+        print(f"Delete Error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/{document_id}/restore")
+async def restore_document(document_id: str, user = Depends(get_current_user)):
+    """
+    Restore a document from trash.
+    """
+    try:
+        # 1. Verify ownership (include deleted records if RLS allows, usually RLS filters by user_id so it's fine)
+        response = supabase.table("documents").select("*").eq("id", document_id).eq("user_id", user.id).single().execute()
+        if not response.data:
+            raise HTTPException(status_code=404, detail="Document not found")
+            
+        doc = response.data
+        
+        # 2. Restore (Set deleted_at to NULL)
+        supabase.table("documents").update({"deleted_at": None}).eq("id", document_id).execute()
+        
+        # 3. Log Activity
+        from app.services.activity_service import log_activity
+        await log_activity(user.id, "RESTORE", "DOCUMENT", document_id, {"name": doc.get("name")})
+        
+        return {"message": "Document restored"}
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.delete("/{document_id}/permanent")
+async def permanent_delete_document(document_id: str, user = Depends(get_current_user)):
+    """
+    Permanently delete a document.
+    """
     try:
         # 1. Get document to find file path
         response = supabase.table("documents").select("*").eq("id", document_id).eq("user_id", user.id).single().execute()
@@ -199,10 +268,14 @@ def delete_document(document_id: str, user = Depends(get_current_user)):
         # 3. Delete from Database
         supabase.table("documents").delete().eq("id", document_id).execute()
         
-        return {"message": "Document deleted successfully"}
+        # 4. Log Activity
+        from app.services.activity_service import log_activity
+        await log_activity(user.id, "PERMANENT_DELETE", "DOCUMENT", document_id, {"name": document.get("name")})
+        
+        return {"message": "Document permanently deleted"}
 
     except Exception as e:
-        print(f"Delete Error: {str(e)}")
+        print(f"Permanent Delete Error: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/backfill-hashes")

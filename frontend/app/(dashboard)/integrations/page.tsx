@@ -4,6 +4,7 @@
 import { useState, useEffect } from "react"
 import { Mail, HardDrive, RefreshCw } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { cn } from "@/lib/utils"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { IntegrationConfigDialog } from "@/components/IntegrationConfigDialog"
 import api from "@/lib/api"
@@ -143,6 +144,11 @@ export default function IntegrationsPage() {
                                         <div className="p-3 bg-blue-50 text-blue-700 rounded-md text-xs">
                                             Scanning your emails. This may take a few hours to fully load. You can navigate away from this page.
                                         </div>
+                                    ) : gmailIntegration.sync_status === 'disconnected' ? (
+                                        <div className="p-3 bg-red-50 text-red-700 rounded-md text-xs flex items-center gap-2">
+                                            <div className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />
+                                            Disconnected. Please reconnect to resume syncing.
+                                        </div>
                                     ) : (
 
                                         <p>Last synced: {gmailIntegration.last_synced_at ? new Date(gmailIntegration.last_synced_at).toLocaleString('en-US', {
@@ -218,7 +224,10 @@ export default function IntegrationsPage() {
                                 <div className="space-y-2">
                                     <p className="text-slate-700 font-medium flex items-center gap-2">
                                         Sync Status:
-                                        <span className={gmailIntegration.sync_status === 'syncing' ? 'text-blue-600 animate-pulse' : ''}>
+                                        <span className={cn(
+                                            gmailIntegration.sync_status === 'syncing' ? 'text-blue-600 animate-pulse' : '',
+                                            gmailIntegration.sync_status === 'disconnected' ? 'text-red-600 font-bold' : ''
+                                        )}>
                                             {gmailIntegration.sync_status || 'Idle'}
                                         </span>
                                     </p>

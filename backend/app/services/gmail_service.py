@@ -159,6 +159,14 @@ async def fetch_gmail_attachments(integration_id: str, user_id: str):
                         
                         # Trigger AI Processing
                         await process_document_ai(document_id, data, mime_type)
+
+                        # Log Activity
+                        from app.services.activity_service import log_activity
+                        await log_activity(user_id, "UPLOAD", "DOCUMENT", document_id, {
+                            "name": filename,
+                            "source": "Gmail",
+                            "source_id": msg_id
+                        })
                         
                 processed_count += 1
                 
@@ -187,9 +195,37 @@ async def fetch_gmail_attachments(integration_id: str, user_id: str):
         print(f"CRITICAL GMAIL SYNC ERROR: {e}")
         import traceback
         traceback.print_exc()
+        
+        status = "error"
+        error_msg = str(e)
+        
+        # Check for Auth Errors
+        if "invalid_grant" in str(e) or "Token has been expired" in str(e) or "RefreshError" in str(type(e).__name__):
+            status = "disconnected"
+            error_msg = "Authentication failed. Please reconnect."
+            
+            # Log Activity
+            from app.services.activity_service import log_activity
+            import asyncio
+            # We are in async function, so we can await
+            await log_activity(user_id, "DISCONNECT", "INTEGRATION", integration_id, {"provider": "gmail", "reason": str(e)})
+            
+            # Create Alert
+            # We need to insert into alerts table directly or use alerts service
+            # Direct insert for simplicity here
+            try:
+                supabase.table("alerts").insert({
+                    "user_id": user_id,
+                    "type": "integration_error",
+                    "message": "Gmail integration disconnected. Please reconnect to resume syncing.",
+                    "is_read": False
+                }).execute()
+            except Exception as alert_e:
+                print(f"Failed to create alert: {alert_e}")
+
         supabase.table("user_integrations").update({
-            "sync_status": "error",
-            "sync_message": f"Error: {str(e)}"
+            "sync_status": status,
+            "sync_message": error_msg
         }).eq("id", integration_id).execute()
 
 from app.services.drive_service import fetch_drive_files

@@ -155,6 +155,22 @@ def fetch_drive_files(integration_id: str, user_id: str):
                 
                 processed_count += 1
 
+                # Log Activity (Synchronous)
+                try:
+                    supabase.table("activity_logs").insert({
+                        "user_id": user_id,
+                        "action": "UPLOAD",
+                        "entity_type": "DOCUMENT",
+                        "entity_id": doc_id,
+                        "details": {
+                            "name": file_name,
+                            "source": "Drive",
+                            "source_id": file_id
+                        }
+                    }).execute()
+                except Exception as log_e:
+                    print(f"Failed to log activity for {doc_id}: {log_e}")
+
         # 8. Update Integration Status
         supabase.table("user_integrations").update({
             "last_synced_at": sync_start_time,
@@ -167,5 +183,43 @@ def fetch_drive_files(integration_id: str, user_id: str):
         print(f"CRITICAL ERROR in Drive Sync: {str(e)}")
         import traceback
         traceback.print_exc()
-        # Update status to error
-        supabase.table("user_integrations").update({"sync_status": "error"}).eq("id", integration_id).execute()
+        
+        status = "error"
+        error_msg = str(e)
+        
+        # Check for Auth Errors
+        if "invalid_grant" in str(e) or "Token has been expired" in str(e) or "RefreshError" in str(type(e).__name__):
+            status = "disconnected"
+            error_msg = "Authentication failed. Please reconnect."
+            
+            # Log Activity
+            # Note: fetch_drive_files is currently synchronous in definition (def fetch_drive_files), 
+            # but called via run_in_threadpool. 
+            # We cannot await async functions here easily without an event loop.
+            # However, log_activity is async.
+            # We can use supabase directly for logging here since we are in a sync function.
+            
+            try:
+                supabase.table("activity_logs").insert({
+                    "user_id": user_id,
+                    "action": "DISCONNECT",
+                    "entity_type": "INTEGRATION",
+                    "entity_id": integration_id,
+                    "details": {"provider": "google_drive", "reason": str(e)}
+                }).execute()
+            except Exception as log_e:
+                print(f"Failed to log activity: {log_e}")
+
+            # Create Alert
+            try:
+                supabase.table("alerts").insert({
+                    "user_id": user_id,
+                    "type": "integration_error",
+                    "message": "Google Drive integration disconnected. Please reconnect.",
+                    "is_read": False
+                }).execute()
+            except Exception as alert_e:
+                print(f"Failed to create alert: {alert_e}")
+
+        # Update status
+        supabase.table("user_integrations").update({"sync_status": status, "sync_message": error_msg}).eq("id", integration_id).execute()
