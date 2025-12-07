@@ -155,8 +155,23 @@ function AlertItemView({ alert, onDismiss }: { alert: AlertItem, onDismiss: (id:
         }
     }
 
+    const getBorderColor = (type: string) => {
+        switch (type) {
+            case 'compliance_mismatch':
+                return 'border-l-red-600'
+            case 'expiry':
+            case 'missing_signature':
+                return 'border-l-orange-500'
+            case 'high_value':
+            case 'auto_renewal':
+                return 'border-l-yellow-600'
+            default:
+                return 'border-l-blue-500'
+        }
+    }
+
     return (
-        <Alert className="bg-white shadow-sm border-l-4 border-l-transparent">
+        <Alert className={`bg-white shadow-sm border-l-4 ${getBorderColor(alert.type)}`}>
             <AlertCircle className={`h-4 w-4 ${getIconColor(alert.type)}`} />
             <AlertTitle className="ml-2 capitalize flex items-center gap-2">
                 {alert.type.replace('_', ' ')} Alert
