@@ -42,12 +42,29 @@ export function DocumentList({ refreshTrigger, dateRange }: DocumentListProps) {
     const [filter, setFilter] = useState("All")
     const [viewMode, setViewMode] = useState<"grid" | "table">("grid")
     const [showDuplicates, setShowDuplicates] = useState(false)
+    const [hasLoadedSettings, setHasLoadedSettings] = useState(false)
 
     // Pagination State
     const [currentPage, setCurrentPage] = useState(1)
     const [totalPages, setTotalPages] = useState(1)
     const [totalDocs, setTotalDocs] = useState(0)
     const limit = 12
+
+    // Load persisted settings
+    useEffect(() => {
+        const saved = localStorage.getItem("documentgem_show_duplicates")
+        if (saved === "true") {
+            setShowDuplicates(true)
+        }
+        setHasLoadedSettings(true)
+    }, [])
+
+    // Save settings when changed (only after initial load)
+    useEffect(() => {
+        if (hasLoadedSettings) {
+            localStorage.setItem("documentgem_show_duplicates", showDuplicates.toString())
+        }
+    }, [showDuplicates, hasLoadedSettings])
 
     useEffect(() => {
         // Reset to page 1 when filters change

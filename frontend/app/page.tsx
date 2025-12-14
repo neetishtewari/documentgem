@@ -263,7 +263,7 @@ export default function LandingPage() {
                                 </Button>
                             </Link>
                             <Link href="/login">
-                                <Button variant="outline" size="lg" className="h-14 px-8 text-lg border-white/20 text-white hover:bg-white/10 hover:text-white">
+                                <Button variant="outline" size="lg" className="h-14 px-8 text-lg bg-transparent border-white text-white hover:bg-white hover:text-brand-navy transition-colors">
                                     Talk to Sales
                                 </Button>
                             </Link>
