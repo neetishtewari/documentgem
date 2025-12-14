@@ -3,6 +3,7 @@
 
 import { useEffect, useState } from "react"
 import Link from "next/link"
+import { useSearchParams } from "next/navigation"
 import { LayoutGrid, List as ListIcon, FileText, Mail, UploadCloud, RefreshCw } from "lucide-react"
 import { DocumentTable } from "./DocumentTable"
 import { Button } from "@/components/ui/button"
@@ -36,10 +37,21 @@ interface DocumentListProps {
     dateRange?: DateRange
 }
 
-export function DocumentList({ refreshTrigger, dateRange }: DocumentListProps) {
+export function DocumentList({ refreshTrigger, dateRange }: { refreshTrigger: number, dateRange?: DateRange }) {
+    const searchParams = useSearchParams()
+
+    // State
     const [documents, setDocuments] = useState<Document[]>([])
     const [loading, setLoading] = useState(true)
     const [filter, setFilter] = useState("All")
+
+    // Sync filter with URL params
+    useEffect(() => {
+        const categoryParam = searchParams.get("category")
+        if (categoryParam) {
+            setFilter(categoryParam)
+        }
+    }, [searchParams])
     const [viewMode, setViewMode] = useState<"grid" | "table">("grid")
     const [showDuplicates, setShowDuplicates] = useState(false)
     const [hasLoadedSettings, setHasLoadedSettings] = useState(false)

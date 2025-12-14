@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { FileText, Receipt, FileCheck, File } from "lucide-react"
 import api from "@/lib/api"
@@ -13,6 +14,7 @@ interface Stats {
 }
 
 export function DashboardStats({ refreshTrigger, dateRange }: { refreshTrigger: number, dateRange?: DateRange }) {
+    const router = useRouter()
     const [stats, setStats] = useState<Stats | null>(null)
 
     useEffect(() => {
@@ -60,7 +62,11 @@ export function DashboardStats({ refreshTrigger, dateRange }: { refreshTrigger: 
             </Card>
 
             {Object.entries(stats.category_counts).map(([category, count]) => (
-                <Card key={category} className="border-none bg-white shadow-lg shadow-slate-200/50 transition-all duration-200 hover:-translate-y-1 hover:shadow-xl hover:shadow-slate-200/60">
+                <Card
+                    key={category}
+                    onClick={() => router.push(`?category=${category}`)}
+                    className="border-none bg-white shadow-lg shadow-slate-200/50 transition-all duration-200 hover:-translate-y-1 hover:shadow-xl hover:shadow-slate-200/60 cursor-pointer hover:ring-2 hover:ring-blue-500/20"
+                >
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium text-slate-500">{category}s</CardTitle>
                         <div className="rounded-full bg-slate-50 p-2">
