@@ -18,13 +18,14 @@ function CallbackContent() {
         const code = searchParams.get("code")
         const state = searchParams.get("state")
 
-        if (!code) {
-            setStatus("error")
-            setMessage("No authorization code received.")
-            return
-        }
 
         const connect = async () => {
+            if (!code) {
+                setStatus("error")
+                setMessage("No authorization code received.")
+                return
+            }
+
             try {
                 let config = {}
                 if (state) {

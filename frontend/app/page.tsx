@@ -118,8 +118,8 @@ export default function LandingPage() {
                                         </div>
                                         <h3 className="text-2xl font-bold text-brand-navy mb-2">Chat with your Data</h3>
                                         <p className="text-slate-600 text-lg">
-                                            "How much did we spend on marketing in Q3?" <br />
-                                            Ask your documents questions in plain English and get instant, cited answers. It's like having a dedicated analyst.
+                                            &quot;How much did we spend on marketing in Q3?&quot; <br />
+                                            Ask your documents questions in plain English and get instant, cited answers. It&apos;s like having a dedicated analyst.
                                         </p>
                                     </div>
 
@@ -146,7 +146,7 @@ export default function LandingPage() {
                                 </div>
                                 <h3 className="text-xl font-bold text-brand-navy mb-2">Instant Extraction</h3>
                                 <p className="text-slate-600">
-                                    Upload an invoice, and we'll extract the total, due date, and vendor instantly. No manual data entry required.
+                                    Upload an invoice, and we&apos;ll extract the total, due date, and vendor instantly. No manual data entry required.
                                 </p>
                                 <div className="mt-6 space-y-2">
                                     <div className="flex justify-between text-sm p-2 bg-slate-50 rounded border border-slate-100">
