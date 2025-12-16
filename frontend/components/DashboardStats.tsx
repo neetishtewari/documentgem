@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { FileText, Receipt, FileCheck, File } from "lucide-react"
+import { AnimatedCounter } from "@/components/ui/animated-counter"
 import api from "@/lib/api"
 
 import { DateRange } from "@/components/DateFilter"
@@ -56,7 +57,9 @@ export function DashboardStats({ refreshTrigger, dateRange }: { refreshTrigger: 
                     <File className="h-4 w-4 text-blue-100" />
                 </CardHeader>
                 <CardContent>
-                    <div className="text-4xl font-bold tracking-tight">{stats.total_documents}</div>
+                    <div className="text-4xl font-bold tracking-tight">
+                        <AnimatedCounter value={stats.total_documents} />
+                    </div>
                     <p className="text-xs text-blue-100/80 mt-1 font-medium">Across all categories</p>
                 </CardContent>
             </Card>
@@ -74,7 +77,9 @@ export function DashboardStats({ refreshTrigger, dateRange }: { refreshTrigger: 
                         </div>
                     </CardHeader>
                     <CardContent>
-                        <div className="text-3xl font-bold text-slate-900">{count}</div>
+                        <div className="text-3xl font-bold text-slate-900">
+                            <AnimatedCounter value={count} />
+                        </div>
                     </CardContent>
                 </Card>
             ))}

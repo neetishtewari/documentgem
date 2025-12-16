@@ -3,6 +3,11 @@
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { ArrowRight, Sparkles, Zap, ShieldCheck } from "lucide-react"
+import { HeroBackground } from "@/components/landing/HeroBackground"
+import { FeatureCard } from "@/components/landing/FeatureCard"
+import { RotatingText } from "@/components/landing/RotatingText"
+import { TypewriterText } from "@/components/ui/typewriter-text"
+import { motion } from "framer-motion"
 
 export default function LandingPage() {
     return (
@@ -33,28 +38,44 @@ export default function LandingPage() {
             <main className="flex-1">
                 {/* Hero Section */}
                 <section className="relative overflow-hidden pt-20 pb-20 md:pt-32">
-                    <div className="absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-blue-100 via-slate-50 to-slate-50 opacity-50"></div>
-
-                    {/* Floating Elements / Grid Background */}
-                    <div className="absolute inset-0 -z-10 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20"></div>
-                    <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-slate-200 to-transparent"></div>
+                    <HeroBackground />
 
                     <div className="container mx-auto px-4 text-center">
-                        <div className="inline-flex items-center rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-sm font-medium text-blue-800 mb-8 animate-in fade-in slide-in-from-bottom-4 duration-1000">
+                        <motion.div
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.5 }}
+                            className="inline-flex items-center rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-sm font-medium text-blue-800 mb-8"
+                        >
                             <Sparkles className="mr-2 h-3.5 w-3.5" />
                             AI-Powered Document Intelligence
-                        </div>
+                        </motion.div>
 
-                        <h1 className="mx-auto max-w-5xl text-5xl font-extrabold tracking-tight text-brand-navy sm:text-7xl mb-6 animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-100 leading-tight">
+                        <motion.h1
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.5, delay: 0.1 }}
+                            className="mx-auto max-w-5xl text-5xl font-extrabold tracking-tight text-brand-navy sm:text-7xl mb-6 leading-tight"
+                        >
                             Turn Document Chaos into <br className="hidden md:block" />
-                            <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600">Business Intelligence.</span>
-                        </h1>
+                            <RotatingText />
+                        </motion.h1>
 
-                        <p className="mx-auto max-w-2xl text-lg text-slate-600 mb-10 animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-200">
+                        <motion.p
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.5, delay: 0.2 }}
+                            className="mx-auto max-w-2xl text-lg text-slate-600 mb-10"
+                        >
                             The AI-powered workspace that organizes, analyzes, and extracts insights from your files automatically. Stop searching, start knowing.
-                        </p>
+                        </motion.p>
 
-                        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-300">
+                        <motion.div
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.5, delay: 0.3 }}
+                            className="flex flex-col sm:flex-row items-center justify-center gap-4"
+                        >
                             <Link href="/login?signup=true">
                                 <Button size="lg" className="h-14 px-8 text-lg bg-brand-navy hover:bg-brand-navy/90 text-white shadow-xl shadow-blue-900/20 transition-all hover:scale-105 hover:shadow-blue-900/30">
                                     Start for Free <ArrowRight className="ml-2 h-5 w-5" />
@@ -65,7 +86,7 @@ export default function LandingPage() {
                                     View Live Demo
                                 </Button>
                             </Link>
-                        </div>
+                        </motion.div>
 
                         {/* Social Proof */}
                         <div className="mt-12 animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-400">
@@ -107,72 +128,80 @@ export default function LandingPage() {
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-6xl mx-auto">
-                            {/* Feature 1: Chat (Large - Spans 2 cols) */}
-                            <div className="md:col-span-2 group relative rounded-3xl border border-slate-200 bg-white p-8 shadow-sm transition-all hover:shadow-xl hover:-translate-y-1 overflow-hidden">
+                            {/* Feature 1: Chat */}
+                            <FeatureCard
+                                className="md:col-span-2"
+                                delay={0.1}
+                            >
                                 <div className="absolute top-0 right-0 -mt-4 -mr-4 w-32 h-32 bg-blue-100 rounded-full blur-3xl opacity-50 group-hover:opacity-100 transition-opacity"></div>
-
-                                <div className="relative z-10 flex flex-col h-full justify-between">
-                                    <div className="mb-6">
-                                        <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-indigo-600 text-white shadow-lg shadow-indigo-600/30">
-                                            <Sparkles className="h-6 w-6" />
-                                        </div>
-                                        <h3 className="text-2xl font-bold text-brand-navy mb-2">Chat with your Data</h3>
-                                        <p className="text-slate-600 text-lg">
-                                            &quot;How much did we spend on marketing in Q3?&quot; <br />
-                                            Ask your documents questions in plain English and get instant, cited answers. It&apos;s like having a dedicated analyst.
-                                        </p>
+                                <div className="mb-6">
+                                    <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-indigo-600 text-white shadow-lg shadow-indigo-600/30">
+                                        <Sparkles className="h-6 w-6" />
                                     </div>
-
-                                    {/* Mock Chat Bubble Visual */}
-                                    <div className="bg-slate-50 rounded-xl p-4 border border-slate-100 mt-4">
-                                        <div className="flex gap-3 mb-3">
-                                            <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600"><Sparkles className="w-4 h-4" /></div>
-                                            <div className="bg-white p-3 rounded-2xl rounded-tl-none shadow-sm text-sm text-slate-700 border border-slate-100">
-                                                Based on your invoices, the total marketing spend for Q3 was <strong>$12,450.00</strong>.
-                                            </div>
-                                        </div>
-                                        <div className="flex gap-2 items-center">
-                                            <div className="h-2 w-2 rounded-full bg-green-500"></div>
-                                            <span className="text-xs text-slate-400">AI Analyst is active</span>
+                                    <h3 className="text-2xl font-bold text-brand-navy mb-2">Chat with your Data</h3>
+                                    <p className="text-slate-600 text-lg">
+                                        &quot;How much did we spend on marketing in Q3?&quot; <br />
+                                        Ask your documents questions in plain English and get instant, cited answers.
+                                    </p>
+                                </div>
+                                <div className="bg-slate-50 rounded-xl p-4 border border-slate-100 mt-4">
+                                    <div className="flex gap-3 mb-3">
+                                        <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600"><Sparkles className="w-4 h-4" /></div>
+                                        <div className="bg-white p-3 rounded-2xl rounded-tl-none shadow-sm text-sm text-slate-700 border border-slate-100">
+                                            <TypewriterText text="Based on your invoices the total marketing spend is $12,450.00" delay={0.5} />
                                         </div>
                                     </div>
+                                    <div className="flex gap-2 items-center">
+                                        <div className="h-2 w-2 rounded-full bg-green-500"></div>
+                                        <span className="text-xs text-slate-400">AI Analyst is active</span>
+                                    </div>
                                 </div>
-                            </div>
+                            </FeatureCard>
 
-                            {/* Feature 2: Extraction (Medium) */}
-                            <div className="group relative rounded-3xl border border-slate-200 bg-white p-8 shadow-sm transition-all hover:shadow-xl hover:-translate-y-1">
-                                <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-blue-600 text-white shadow-lg shadow-blue-600/30">
-                                    <Zap className="h-6 w-6" />
-                                </div>
-                                <h3 className="text-xl font-bold text-brand-navy mb-2">Instant Extraction</h3>
-                                <p className="text-slate-600">
-                                    Upload an invoice, and we&apos;ll extract the total, due date, and vendor instantly. No manual data entry required.
-                                </p>
+                            {/* Feature 2: Extraction */}
+                            <FeatureCard
+                                title="Instant Extraction"
+                                description="Upload an invoice, and we'll extract the total, due date, and vendor instantly."
+                                icon={
+                                    <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-blue-600 text-white shadow-lg shadow-blue-600/30">
+                                        <Zap className="h-6 w-6" />
+                                    </div>
+                                }
+                                delay={0.2}
+                            >
                                 <div className="mt-6 space-y-2">
                                     <div className="flex justify-between text-sm p-2 bg-slate-50 rounded border border-slate-100">
                                         <span className="text-slate-500">Total</span>
-                                        <span className="font-mono font-bold text-brand-navy">$1,200.50</span>
+                                        <span className="font-mono font-bold text-brand-navy">
+                                            <TypewriterText text="$1,200.50" delay={0.5} />
+                                        </span>
                                     </div>
                                     <div className="flex justify-between text-sm p-2 bg-slate-50 rounded border border-slate-100">
                                         <span className="text-slate-500">Date</span>
-                                        <span className="font-mono font-bold text-brand-navy">Oct 24, 2024</span>
+                                        <span className="font-mono font-bold text-brand-navy">
+                                            <TypewriterText text="Oct 24" delay={0.8} />
+                                        </span>
                                     </div>
                                 </div>
-                            </div>
+                            </FeatureCard>
 
-                            {/* Feature 3: Organization (Medium) */}
-                            <div className="group relative rounded-3xl border border-slate-200 bg-white p-8 shadow-sm transition-all hover:shadow-xl hover:-translate-y-1">
-                                <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-teal-600 text-white shadow-lg shadow-teal-600/30">
-                                    <ShieldCheck className="h-6 w-6" />
-                                </div>
-                                <h3 className="text-xl font-bold text-brand-navy mb-2">Auto-Organization</h3>
-                                <p className="text-slate-600">
-                                    We automatically categorize your files into Invoices, Contracts, and Receipts. Keep your digital life tidy without lifting a finger.
-                                </p>
-                            </div>
+                            {/* Feature 3: Organization */}
+                            <FeatureCard
+                                title="Auto-Organization"
+                                description="We automatically categorize your files into Invoices, Contracts, and Receipts to keep your life tidy."
+                                icon={
+                                    <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-teal-600 text-white shadow-lg shadow-teal-600/30">
+                                        <ShieldCheck className="h-6 w-6" />
+                                    </div>
+                                }
+                                delay={0.3}
+                            />
 
-                            {/* Feature 4: Security (Large - Spans 2 cols) */}
-                            <div className="md:col-span-2 group relative rounded-3xl border border-slate-200 bg-brand-navy p-8 shadow-sm transition-all hover:shadow-xl hover:-translate-y-1 overflow-hidden">
+                            {/* Feature 4: Security */}
+                            <FeatureCard
+                                className="md:col-span-2 bg-brand-navy border-brand-navy"
+                                delay={0.4}
+                            >
                                 <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-10"></div>
                                 <div className="relative z-10 flex flex-col md:flex-row items-center gap-8">
                                     <div className="flex-1">
@@ -181,16 +210,16 @@ export default function LandingPage() {
                                         </div>
                                         <h3 className="text-2xl font-bold text-white mb-2">Bank-Grade Security</h3>
                                         <p className="text-blue-100 text-lg">
-                                            Your data is encrypted at rest and in transit. We use industry-standard security protocols to ensure your sensitive business documents remain private and secure.
+                                            Your data is encrypted at rest and in transit.
                                         </p>
                                     </div>
                                     <div className="flex-shrink-0">
-                                        <Button variant="outline" className="border-white/20 text-white hover:bg-white/10 hover:text-white">
-                                            Read Security Policy
+                                        <Button variant="outline" className="border-white/20 text-white hover:bg-white/10 hover:text-white bg-transparent">
+                                            Read Policy
                                         </Button>
                                     </div>
                                 </div>
-                            </div>
+                            </FeatureCard>
                         </div>
                     </div>
                 </section>
@@ -206,7 +235,14 @@ export default function LandingPage() {
 
                         <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto relative">
                             {/* Connecting Line (Desktop) */}
-                            <div className="hidden md:block absolute top-12 left-[16%] right-[16%] h-0.5 bg-gradient-to-r from-blue-200 via-indigo-200 to-blue-200 -z-10"></div>
+                            <motion.div
+                                initial={{ scaleX: 0 }}
+                                whileInView={{ scaleX: 1 }}
+                                viewport={{ once: true }}
+                                transition={{ duration: 1.5, ease: "easeInOut" }}
+                                style={{ originX: 0 }}
+                                className="hidden md:block absolute top-12 left-[16%] right-[16%] h-0.5 bg-gradient-to-r from-blue-200 via-indigo-200 to-blue-200"
+                            ></motion.div>
 
                             {/* Step 1 */}
                             <div className="relative flex flex-col items-center text-center">
