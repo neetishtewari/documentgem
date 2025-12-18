@@ -37,7 +37,7 @@ export default function LandingPage() {
 
             <main className="flex-1">
                 {/* Hero Section */}
-                <section className="relative overflow-hidden pt-20 pb-20 md:pt-32">
+                <section className="relative overflow-hidden pt-20 pb-20 md:pt-32 isolate">
                     <HeroBackground />
 
                     <div className="container mx-auto px-4 text-center">
@@ -45,7 +45,7 @@ export default function LandingPage() {
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ duration: 0.5 }}
-                            className="inline-flex items-center rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-sm font-medium text-blue-800 mb-8"
+                            className="inline-flex items-center rounded-full border border-blue-400/30 bg-blue-900/30 px-3 py-1 text-sm font-medium text-blue-300 mb-8 backdrop-blur-sm"
                         >
                             <Sparkles className="mr-2 h-3.5 w-3.5" />
                             AI-Powered Document Intelligence
@@ -55,7 +55,7 @@ export default function LandingPage() {
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ duration: 0.5, delay: 0.1 }}
-                            className="mx-auto max-w-5xl text-5xl font-extrabold tracking-tight text-brand-navy sm:text-7xl mb-6 leading-tight"
+                            className="mx-auto max-w-5xl text-5xl font-extrabold tracking-tight text-white sm:text-7xl mb-6 leading-tight"
                         >
                             Turn Document Chaos into <br className="hidden md:block" />
                             <RotatingText />
@@ -65,7 +65,7 @@ export default function LandingPage() {
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ duration: 0.5, delay: 0.2 }}
-                            className="mx-auto max-w-2xl text-lg text-slate-600 mb-10"
+                            className="mx-auto max-w-2xl text-lg text-blue-100/80 mb-10"
                         >
                             The AI-powered workspace that organizes, analyzes, and extracts insights from your files automatically. Stop searching, start knowing.
                         </motion.p>
@@ -77,12 +77,12 @@ export default function LandingPage() {
                             className="flex flex-col sm:flex-row items-center justify-center gap-4"
                         >
                             <Link href="/login?signup=true">
-                                <Button size="lg" className="h-14 px-8 text-lg bg-brand-navy hover:bg-brand-navy/90 text-white shadow-xl shadow-blue-900/20 transition-all hover:scale-105 hover:shadow-blue-900/30">
+                                <Button size="lg" className="h-14 px-8 text-lg bg-blue-600 hover:bg-blue-500 text-white shadow-xl shadow-blue-900/20 transition-all hover:scale-105 hover:shadow-blue-900/40">
                                     Start for Free <ArrowRight className="ml-2 h-5 w-5" />
                                 </Button>
                             </Link>
                             <Link href="/login">
-                                <Button variant="outline" size="lg" className="h-14 px-8 text-lg border-slate-300 text-slate-700 hover:bg-slate-50 hover:text-brand-navy">
+                                <Button variant="outline" size="lg" className="h-14 px-8 text-lg border-white/10 text-white hover:bg-white/10 hover:text-white bg-white/5 backdrop-blur-sm">
                                     View Live Demo
                                 </Button>
                             </Link>
@@ -90,13 +90,13 @@ export default function LandingPage() {
 
                         {/* Social Proof */}
                         <div className="mt-12 animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-400">
-                            <p className="text-sm font-medium text-slate-500 mb-4">TRUSTED BY INNOVATIVE TEAMS</p>
-                            <div className="flex flex-wrap justify-center gap-8 opacity-60 grayscale transition-all hover:grayscale-0">
-                                {/* Placeholders for logos - using text for now but styled like logos */}
-                                <span className="text-xl font-bold text-slate-400 flex items-center gap-2"><div className="w-6 h-6 bg-slate-300 rounded-full"></div> Acme Corp</span>
-                                <span className="text-xl font-bold text-slate-400 flex items-center gap-2"><div className="w-6 h-6 bg-slate-300 rounded-md"></div> Globex</span>
-                                <span className="text-xl font-bold text-slate-400 flex items-center gap-2"><div className="w-6 h-6 bg-slate-300 rounded-sm"></div> Soylent</span>
-                                <span className="text-xl font-bold text-slate-400 flex items-center gap-2"><div className="w-6 h-6 bg-slate-300 rounded-full"></div> Initech</span>
+                            <p className="text-sm font-medium text-slate-400 mb-4">TRUSTED BY INNOVATIVE TEAMS</p>
+                            <div className="flex flex-wrap justify-center gap-8 opacity-50 grayscale transition-all hover:grayscale-0 hover:opacity-100">
+                                {/* Placeholders for logos */}
+                                <span className="text-xl font-bold text-slate-400 flex items-center gap-2"><div className="w-6 h-6 bg-slate-600 rounded-full"></div> Acme Corp</span>
+                                <span className="text-xl font-bold text-slate-400 flex items-center gap-2"><div className="w-6 h-6 bg-slate-600 rounded-md"></div> Globex</span>
+                                <span className="text-xl font-bold text-slate-400 flex items-center gap-2"><div className="w-6 h-6 bg-slate-600 rounded-sm"></div> Soylent</span>
+                                <span className="text-xl font-bold text-slate-400 flex items-center gap-2"><div className="w-6 h-6 bg-slate-600 rounded-full"></div> Initech</span>
                             </div>
                         </div>
 
