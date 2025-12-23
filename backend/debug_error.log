@@ -1,9 +1,0 @@
-Error: {'message': 'null value in column "refresh_token" of relation "user_integrations" violates not-null constraint', 'code': '23502', 'hint': None, 'details': 'Failing row contains (67a970ff-bd77-4294-a461-90719d6a9851, 1b8e4635-aae7-4e9d-9543-b2ff1a1820bd, google_drive, ya29.A0Aa7pCA9B0nsEpa3KGaj_gyMj555kgxEMj4Xfh63QjI-lE1MLWCWfGROaz..., null, {"provider": "google_drive", "customDate": null, "lookbackDays":..., null, 2025-12-21 07:19:12.682301+00, 2025-12-21 07:19:12.682301+00, idle, 0, 0, null).'}
-
-Traceback:
-Traceback (most recent call last):
-  File "/Users/neetishtewari/documentgem/backend/app/routers/integrations.py", line 106, in connect_google
-    response = supabase.table("user_integrations").insert(data).execute()
-  File "/Users/neetishtewari/documentgem/backend/venv/lib/python3.9/site-packages/postgrest/_sync/request_builder.py", line 53, in execute
-    raise APIError(dict(json_obj))
-postgrest.exceptions.APIError: {'message': 'null value in column "refresh_token" of relation "user_integrations" violates not-null constraint', 'code': '23502', 'hint': None, 'details': 'Failing row contains (67a970ff-bd77-4294-a461-90719d6a9851, 1b8e4635-aae7-4e9d-9543-b2ff1a1820bd, google_drive, ya29.A0Aa7pCA9B0nsEpa3KGaj_gyMj555kgxEMj4Xfh63QjI-lE1MLWCWfGROaz..., null, {"provider": "google_drive", "customDate": null, "lookbackDays":..., null, 2025-12-21 07:19:12.682301+00, 2025-12-21 07:19:12.682301+00, idle, 0, 0, null).'}
