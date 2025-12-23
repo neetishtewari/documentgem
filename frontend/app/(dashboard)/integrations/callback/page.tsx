@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Loader2, CheckCircle, XCircle } from "lucide-react"
 import api from "@/lib/api"
@@ -14,12 +14,17 @@ function CallbackContent() {
     const [status, setStatus] = useState<"loading" | "success" | "error">("loading")
     const [message, setMessage] = useState("Connecting your account...")
 
+    const processedRef = useRef(false)
+
     useEffect(() => {
+        if (processedRef.current) return
+        processedRef.current = true
+
         const code = searchParams.get("code")
         const state = searchParams.get("state")
 
-
         const connect = async () => {
+            // ... existing logic ...
             if (!code) {
                 setStatus("error")
                 setMessage("No authorization code received.")

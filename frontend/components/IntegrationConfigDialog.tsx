@@ -32,12 +32,14 @@ interface IntegrationConfigDialogProps {
     isOpen: boolean
     onOpenChange: (open: boolean) => void
     onConnect: (config: { lookbackDays: number; customDate?: Date }) => void
+    providerName?: string
 }
 
 export function IntegrationConfigDialog({
     isOpen,
     onOpenChange,
     onConnect,
+    providerName = "Gmail"
 }: IntegrationConfigDialogProps) {
     const [lookbackPeriod, setLookbackPeriod] = useState("90")
     const [customDate, setCustomDate] = useState<Date | undefined>(undefined)
@@ -65,7 +67,7 @@ export function IntegrationConfigDialog({
                         <div className="p-2 bg-red-100 rounded-full">
                             <Mail className="h-5 w-5 text-red-600" />
                         </div>
-                        Connect Gmail
+                        Connect {providerName}
                     </DialogTitle>
                     <DialogDescription>
                         Choose how far back we should look for documents. We'll only fetch attachments from this period onwards.
