@@ -58,13 +58,13 @@ async def get_google_auth_url(lookback_days: int = 90, custom_date: str = None, 
         return {"url": auth_url}
         
     except Exception as e:
-        print(f"Error generating auth URL: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        from app.core.logging_config import get_logger
+        get_logger(__name__).error(f"Error generating auth URL: {e}")
+        raise HTTPException(status_code=500, detail="Failed to generate authentication URL.")
 
 @router.get("/google/callback")
 async def google_callback(code: str, state: str = None):
     # Redirect to frontend callback page
-    frontend_url = "http://localhost:3000" # TODO: Use env var or settings
-    redirect_url = f"{frontend_url}/integrations/callback?code={code}&state={state}"
+    redirect_url = f"{settings.FRONTEND_URL}/integrations/callback?code={code}&state={state}"
     from fastapi.responses import RedirectResponse
     return RedirectResponse(url=redirect_url)

@@ -4,11 +4,13 @@ from app.core.config import settings
 from app.services.supabase import supabase
 from app.services.ai_service import generate_embedding
 from app.dependencies.auth import get_current_user
+from app.core.logging_config import get_logger
 from openai import AsyncOpenAI
 from pydantic import BaseModel
 from typing import List, Optional
 from datetime import datetime
 
+logger = get_logger(__name__)
 router = APIRouter()
 client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
 
@@ -44,7 +46,8 @@ async def get_sessions(user = Depends(get_current_user)):
             .execute()
         return response.data
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error("Failed to get sessions", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to retrieve chat sessions.")
 
 @router.post("/sessions", response_model=ChatSession)
 async def create_session(request: CreateSessionRequest, user = Depends(get_current_user)):
@@ -56,7 +59,8 @@ async def create_session(request: CreateSessionRequest, user = Depends(get_curre
             raise HTTPException(status_code=500, detail="Failed to create session")
         return response.data[0]
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error("Failed to create session", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to create chat session.")
 
 @router.delete("/sessions/{session_id}")
 async def delete_session(session_id: str, user = Depends(get_current_user)):
@@ -68,8 +72,11 @@ async def delete_session(session_id: str, user = Depends(get_current_user)):
 
         supabase.table("chat_sessions").delete().eq("id", session_id).execute()
         return {"message": "Session deleted"}
+    except HTTPException:
+        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error("Failed to delete session", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to delete chat session.")
 
 @router.get("/sessions/{session_id}/messages", response_model=List[ChatMessage])
 async def get_session_messages(session_id: str, user = Depends(get_current_user)):
@@ -85,8 +92,11 @@ async def get_session_messages(session_id: str, user = Depends(get_current_user)
             .order("created_at", desc=False)\
             .execute()
         return response.data
+    except HTTPException:
+        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error("Failed to get session messages", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to retrieve messages.")
 
 @router.post("/sessions/{session_id}/messages")
 async def send_message(session_id: str, request: SendMessageRequest, user = Depends(get_current_user)):
@@ -130,9 +140,9 @@ async def send_message(session_id: str, request: SendMessageRequest, user = Depe
                     ]
                 )
                 search_query_raw = rewrite_response.choices[0].message.content.strip()
-                print(f"Rewritten Query Raw: '{search_query_raw}'")
+                logger.debug(f"Rewritten Query Raw: '{search_query_raw}'")
             except Exception as e:
-                print(f"Query rewriting failed: {e}")
+                logger.warning(f"Query rewriting failed: {e}")
                 
         # 3. Retrieve Context (RAG) - Multi-Query Support
         search_queries = [q.strip() for q in search_query_raw.split('|')]
@@ -140,7 +150,7 @@ async def send_message(session_id: str, request: SendMessageRequest, user = Depe
         
         for q in search_queries:
             if not q: continue
-            print(f"Executing Search: '{q}'")
+            logger.debug(f"Executing RAG search: '{q}'")
             query_embedding = await generate_embedding(q)
             
             if query_embedding:
@@ -215,13 +225,15 @@ async def send_message(session_id: str, request: SendMessageRequest, user = Depe
                 new_title = title_response.choices[0].message.content.strip()
                 supabase.table("chat_sessions").update({"title": new_title}).eq("id", session_id).execute()
             except Exception as e:
-                print(f"Auto-titling failed: {e}")
+                logger.warning(f"Auto-titling failed: {e}")
 
         return {"role": "assistant", "content": ai_content}
 
+    except HTTPException:
+        raise
     except Exception as e:
-        print(f"Chat Error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error("Chat error", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to process chat message.")
 
 # Keep existing single-doc chat endpoint for backward compatibility if needed, 
 # or remove/refactor. The frontend 'Chat' component uses: /api/chat/{documentId}
@@ -279,6 +291,8 @@ async def chat_with_document(
         
         return {"answer": response.choices[0].message.content}
 
+    except HTTPException:
+        raise
     except Exception as e:
-        print(f"Chat Error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error("Document chat error", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to process document chat.")

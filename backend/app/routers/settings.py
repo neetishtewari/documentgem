@@ -1,7 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException, Body
 from app.dependencies.auth import get_current_user
 from app.services.supabase import supabase
+from app.core.logging_config import get_logger
 
+logger = get_logger(__name__)
 router = APIRouter()
 
 @router.get("/")
@@ -27,7 +29,8 @@ def get_settings(user = Depends(get_current_user)):
             "theme": "light"
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error("Failed to get settings", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to retrieve settings.")
 
 @router.patch("/")
 def update_settings(settings: dict = Body(...), user = Depends(get_current_user)):
@@ -39,4 +42,5 @@ def update_settings(settings: dict = Body(...), user = Depends(get_current_user)
         # In real impl, save to DB.
         return settings
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error("Failed to update settings", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to update settings.")

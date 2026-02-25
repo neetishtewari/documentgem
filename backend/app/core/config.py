@@ -15,4 +15,15 @@ class Settings:
     GOOGLE_CLIENT_SECRET: str = os.getenv("GOOGLE_CLIENT_SECRET", "")
     GOOGLE_REDIRECT_URI: str = os.getenv("GOOGLE_REDIRECT_URI", "http://localhost:8000/api/auth/google/callback")
     
+    # Environment & Security
+    ENVIRONMENT: str = os.getenv("ENVIRONMENT", "development")
+    FRONTEND_URL: str = os.getenv("FRONTEND_URL", "http://localhost:3000")
+    MAX_UPLOAD_SIZE_MB: int = int(os.getenv("MAX_UPLOAD_SIZE_MB", "20"))
+    RATE_LIMIT_PER_MINUTE: str = os.getenv("RATE_LIMIT_PER_MINUTE", "60/minute")
+    RATE_LIMIT_CHAT_PER_MINUTE: str = os.getenv("RATE_LIMIT_CHAT_PER_MINUTE", "20/minute")
+
+    @property
+    def is_production(self) -> bool:
+        return self.ENVIRONMENT == "production"
+
 settings = Settings()

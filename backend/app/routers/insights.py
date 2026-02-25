@@ -1,10 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException
 from app.dependencies.auth import get_current_user
 from app.services.supabase import supabase
+from app.core.logging_config import get_logger
 from collections import defaultdict
 from datetime import datetime
 import re
 
+logger = get_logger(__name__)
 router = APIRouter()
 
 def parse_amount(amount_str):
@@ -143,5 +145,5 @@ def get_insights(user = Depends(get_current_user)):
         }
 
     except Exception as e:
-        print(f"Error generating insights: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error("Error generating insights", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to generate insights.")

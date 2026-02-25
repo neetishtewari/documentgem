@@ -2,9 +2,11 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from app.services.supabase import supabase
 from app.services.ai_service import generate_embedding
 from app.dependencies.auth import get_current_user
+from app.core.logging_config import get_logger
 from pydantic import BaseModel
 from typing import List, Optional
 
+logger = get_logger(__name__)
 router = APIRouter()
 
 class SearchResult(BaseModel):
@@ -24,12 +26,12 @@ async def search_documents(q: str = Query(..., min_length=1), user = Depends(get
     results = []
     seen_ids = set()
     
-    print(f"DEBUG: Searching for '{q}' for user {user.id}")
+    logger.debug(f"Searching for '{q}'", extra={"user_id": str(user.id)})
 
     try:
         # DEBUG: Check total docs for user
         count_check = supabase.table("documents").select("id", count="exact").eq("user_id", user.id).execute()
-        print(f"DEBUG: User has {count_check.count} total documents.")
+        logger.debug(f"User has {count_check.count} total documents")
 
         # 1. Keyword Search (Split into two queries to avoid .or_() syntax issues)
         
@@ -49,8 +51,7 @@ async def search_documents(q: str = Query(..., min_length=1), user = Depends(get
             .limit(10) \
             .execute()
             
-        print(f"DEBUG: Name matches: {len(name_response.data)}")
-        print(f"DEBUG: Summary matches: {len(summary_response.data)}")
+        logger.debug(f"Name matches: {len(name_response.data)}, Summary matches: {len(summary_response.data)}")
         
         # Merge results
         combined_docs = name_response.data + summary_response.data
@@ -82,7 +83,7 @@ async def search_documents(q: str = Query(..., min_length=1), user = Depends(get
                 "filter_user_id": str(user.id)
             }).execute()
             
-            print(f"DEBUG: Vector matches (raw): {len(rpc_response.data)}")
+            logger.debug(f"Vector matches (raw): {len(rpc_response.data)}")
             
             for match in rpc_response.data:
                 doc_id = match['document_id']
@@ -114,7 +115,5 @@ async def search_documents(q: str = Query(..., min_length=1), user = Depends(get
         return results
 
     except Exception as e:
-        print(f"Search error: {e}")
-        import traceback
-        traceback.print_exc()
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error("Search error", exc_info=True)
+        raise HTTPException(status_code=500, detail="Search failed. Please try again.")

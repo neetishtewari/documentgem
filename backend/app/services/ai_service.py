@@ -1,9 +1,11 @@
 from openai import AsyncOpenAI
 from app.core.config import settings
+from app.core.logging_config import get_logger
 import io
 from pypdf import PdfReader
 import json
 
+logger = get_logger(__name__)
 client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
 
 import base64
@@ -26,7 +28,7 @@ async def extract_text_from_document(file_content: bytes, file_type: str) -> str
                 for page in reader.pages:
                     text_content += page.extract_text() or ""
             except Exception as e:
-                print(f"pypdf extraction failed: {e}")
+                logger.warning(f"pypdf extraction failed: {e}")
 
             # If pypdf extracted very little text, it might be a scanned PDF.
             # For now, we return what we found. 
@@ -34,7 +36,7 @@ async def extract_text_from_document(file_content: bytes, file_type: str) -> str
             
         elif "image" in file_type:
             # Use GPT-4o Vision for images
-            print("Processing image with GPT-4o Vision...")
+            logger.info("Processing image with GPT-4o Vision")
             base64_image = base64.b64encode(file_content).decode('utf-8')
             
             response = await client.chat.completions.create(
@@ -58,7 +60,7 @@ async def extract_text_from_document(file_content: bytes, file_type: str) -> str
             text_content = response.choices[0].message.content
             
     except Exception as e:
-        print(f"Text Extraction Error: {e}")
+        logger.error(f"Text Extraction Error: {e}")
         
     return text_content
 
@@ -113,9 +115,8 @@ async def classify_document(file_content: bytes, file_type: str) -> dict:
         return result
 
     except Exception as e:
-        error_msg = f"AI Classification Error: {str(e)}"
-        print(error_msg)
-        return {"category": "Error", "confidence": 0.0, "summary": error_msg}
+        logger.error(f"AI Classification Error: {str(e)}")
+        return {"category": "Error", "confidence": 0.0, "summary": f"AI Classification Error: {str(e)}"}
 
 async def generate_embedding(text: str) -> list[float]:
     """
@@ -128,7 +129,7 @@ async def generate_embedding(text: str) -> list[float]:
         )
         return response.data[0].embedding
     except Exception as e:
-        print(f"Embedding Error: {e}")
+        logger.error(f"Embedding Error: {e}")
         return []
 
 def chunk_text(text: str, chunk_size: int = 1000, overlap: int = 200) -> list[str]:

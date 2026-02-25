@@ -1,14 +1,16 @@
 from fastapi import APIRouter, Depends, HTTPException
 from app.services.supabase import supabase
 from app.dependencies.auth import get_current_user
+from app.core.logging_config import get_logger
 from collections import Counter
 from datetime import datetime, timedelta
 
+logger = get_logger(__name__)
 router = APIRouter()
 
 @router.get("/summary")
 def get_analytics_summary(user = Depends(get_current_user)):
-    print(f"Analytics Summary requested for user {user.id}")
+    logger.debug("Analytics summary requested", extra={"user_id": str(user.id)})
     try:
         # Fetch all documents for the user (excluding duplicates for accurate stats)
         response = supabase.table("documents").select("size, category, source").eq("user_id", user.id).eq("is_duplicate", False).execute()
@@ -34,7 +36,8 @@ def get_analytics_summary(user = Depends(get_current_user)):
             "source_distribution": source_data
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error("Failed to get analytics summary", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to retrieve analytics summary.")
 
 @router.get("/trends")
 def get_analytics_trends(user = Depends(get_current_user)):
@@ -65,4 +68,5 @@ def get_analytics_trends(user = Depends(get_current_user)):
         
         return trend_data
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error("Failed to get analytics trends", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to retrieve analytics trends.")

@@ -47,3 +47,4 @@ google-auth-oauthlib==1.2.1
 google-api-python-client==2.155.0
 apscheduler==3.11.1
 tzlocal==5.3.1
+slowapi==0.1.9

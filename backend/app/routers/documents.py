@@ -3,16 +3,27 @@ from fastapi.concurrency import run_in_threadpool
 from app.core.config import settings
 from app.services.supabase import supabase
 from app.dependencies.auth import get_current_user
+from app.core.logging_config import get_logger
 import uuid
 import os
 import shutil
 from app.services.ai_service import classify_document, generate_embedding, chunk_text
 
+logger = get_logger(__name__)
 router = APIRouter()
 
 from app.services.document_processor import process_document_ai
 
 import hashlib
+
+# Allowed content types for upload
+ALLOWED_CONTENT_TYPES = {
+    "application/pdf",
+    "image/jpeg",
+    "image/png",
+    "image/webp",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",  # .docx
+}
 
 @router.post("/upload")
 async def upload_document(
@@ -21,21 +32,32 @@ async def upload_document(
     user = Depends(get_current_user)
 ):
     try:
-        # 1. Read content and calculate hash
+        # 0. Validate file type
+        if file.content_type not in ALLOWED_CONTENT_TYPES:
+            raise HTTPException(
+                status_code=400,
+                detail=f"File type '{file.content_type}' is not supported. Allowed: PDF, JPEG, PNG, WebP, DOCX."
+            )
+
+        # 1. Read content and validate size
         file_content = await file.read()
+        max_bytes = settings.MAX_UPLOAD_SIZE_MB * 1024 * 1024
+        if len(file_content) > max_bytes:
+            raise HTTPException(
+                status_code=400,
+                detail=f"File too large. Maximum size is {settings.MAX_UPLOAD_SIZE_MB}MB."
+            )
+
         file_hash = hashlib.sha256(file_content).hexdigest()
         
         # 2. Check for duplicates
-        # We check if ANY document with this hash exists for this user, regardless of is_duplicate status
-        # If one exists, this new one is a duplicate.
         duplicate_check = supabase.table("documents").select("id").eq("user_id", user.id).eq("content_hash", file_hash).limit(1).execute()
         is_duplicate = len(duplicate_check.data) > 0
 
         # 3. Upload file to Supabase Storage
         file_ext = file.filename.split(".")[-1]
-        file_path = f"{user.id}/{uuid.uuid4()}.{file_ext}" # Organize by user_id
+        file_path = f"{user.id}/{uuid.uuid4()}.{file_ext}"
         
-        # Upload to 'documents' bucket (Blocking -> Thread Pool)
         def upload_to_storage():
             return supabase.storage.from_("documents").upload(
                 path=file_path,
@@ -52,7 +74,7 @@ async def upload_document(
             "file_path": file_path,
             "type": file.content_type,
             "size": len(file_content),
-            "category": "Processing...", # Initial state
+            "category": "Processing...",
             "user_id": user.id,
             "source": "Upload",
             "source_date": datetime.datetime.now(datetime.timezone.utc).isoformat(),
@@ -60,7 +82,6 @@ async def upload_document(
             "is_duplicate": is_duplicate
         }
         
-        # Blocking DB insert -> Thread Pool
         def insert_doc():
             return supabase.table("documents").insert(document_data).execute()
             
@@ -68,9 +89,10 @@ async def upload_document(
         document = response.data[0]
         document_id = document['id']
 
-        # 5. Trigger AI Classification in Background (Only if not a duplicate? Or always? 
-        # Strategy: Always process for now, user might want to keep it because it has different metadata/name)
+        # 5. Trigger AI Classification in Background
         background_tasks.add_task(process_document_ai, document_id, file_content, file.content_type)
+        
+        logger.info(f"Document uploaded: {document_id}", extra={"user_id": str(user.id), "document_id": document_id})
         
         return {
             "message": "File uploaded successfully" + (" (Duplicate detected)" if is_duplicate else ""), 
@@ -78,10 +100,11 @@ async def upload_document(
             "is_duplicate": is_duplicate
         }
 
+    except HTTPException:
+        raise
     except Exception as e:
-        import traceback
-        traceback.print_exc()
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error("Document upload failed", exc_info=True, extra={"user_id": str(user.id)})
+        raise HTTPException(status_code=500, detail="Failed to upload document. Please try again.")
 
 @router.get("/stats")
 def get_stats(
@@ -111,7 +134,8 @@ def get_stats(
             "category_counts": counts
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error("Failed to get stats", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to retrieve document statistics.")
 
 @router.get("/")
 def get_documents(
@@ -157,7 +181,8 @@ def get_documents(
             "total_pages": total_pages
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error("Failed to get documents", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to retrieve documents.")
 
 @router.get("/trash")
 def get_trash(user = Depends(get_current_user)):
@@ -168,7 +193,8 @@ def get_trash(user = Depends(get_current_user)):
         response = supabase.table("documents").select("*").eq("user_id", user.id).not_.is_("deleted_at", "null").order("deleted_at", desc=True).execute()
         return response.data
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error("Failed to get trash", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to retrieve trash.")
 
 @router.patch("/{document_id}")
 def update_document(
@@ -190,8 +216,11 @@ def update_document(
             raise HTTPException(status_code=404, detail="Document not found")
             
         return response.data[0]
+    except HTTPException:
+        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error("Failed to update document", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to update document.")
 
 @router.delete("/{document_id}")
 async def delete_document(document_id: str, user = Depends(get_current_user)):
@@ -218,9 +247,11 @@ async def delete_document(document_id: str, user = Depends(get_current_user)):
         
         return {"message": "Document moved to trash"}
 
+    except HTTPException:
+        raise
     except Exception as e:
-        print(f"Delete Error: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error("Failed to delete document", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to delete document.")
 
 @router.post("/{document_id}/restore")
 async def restore_document(document_id: str, user = Depends(get_current_user)):
@@ -244,8 +275,11 @@ async def restore_document(document_id: str, user = Depends(get_current_user)):
         
         return {"message": "Document restored"}
         
+    except HTTPException:
+        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error("Failed to restore document", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to restore document.")
 
 @router.delete("/{document_id}/permanent")
 async def permanent_delete_document(document_id: str, user = Depends(get_current_user)):
@@ -274,9 +308,11 @@ async def permanent_delete_document(document_id: str, user = Depends(get_current
         
         return {"message": "Document permanently deleted"}
 
+    except HTTPException:
+        raise
     except Exception as e:
-        print(f"Permanent Delete Error: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error("Failed to permanently delete document", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to permanently delete document.")
 
 @router.post("/backfill-hashes")
 async def backfill_hashes(user = Depends(get_current_user)):
@@ -316,7 +352,7 @@ async def backfill_hashes(user = Depends(get_current_user)):
                 updated_count += 1
                 
             except Exception as inner_e:
-                print(f"Error processing doc {doc['id']}: {inner_e}")
+                logger.warning(f"Error processing doc {doc['id']}: {inner_e}")
                 continue
                 
         return {
@@ -326,4 +362,5 @@ async def backfill_hashes(user = Depends(get_current_user)):
         }
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error("Backfill hashes failed", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to backfill document hashes.")
