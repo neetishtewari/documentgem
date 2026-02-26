@@ -1,12 +1,15 @@
 from app.services.supabase import supabase
+from app.core.logging_config import get_logger
 from datetime import datetime, timedelta, timezone
 import json
+
+logger = get_logger(__name__)
 
 async def check_expiring_documents():
     """
     Scans documents for expiry dates and creates alerts.
     """
-    print("Running check_expiring_documents...")
+    logger.info("Running check_expiring_documents")
     try:
         # Fetch documents with metadata and summary
         response = supabase.table("documents").select("id, name, user_id, metadata, summary").not_.is_("metadata", "null").execute()
@@ -25,7 +28,7 @@ async def check_expiring_documents():
                     try:
                         metadata = json.loads(metadata)
                     except:
-                        print(f"Failed to parse metadata for doc {doc['id']}")
+                        logger.warning(f"Failed to parse metadata for doc {doc['id']}")
                         continue
                 
                 if not isinstance(metadata, dict):
@@ -90,13 +93,13 @@ async def check_expiring_documents():
                      await create_alert(doc["user_id"], doc["id"], "auto_renewal", f"Document '{doc['name']}' has an auto-renewal clause.")
 
             except Exception as e:
-                print(f"Error processing doc {doc.get('id')}: {e}")
+                logger.error(f"Error processing doc {doc.get('id')}: {e}")
                 continue
                         
-        print(f"Alert check complete.")
+        logger.info("Alert check complete")
         
     except Exception as e:
-        print(f"Error checking expiring documents: {e}")
+        logger.error(f"Error checking expiring documents: {e}")
 
 async def create_alert(user_id, document_id, type_, message):
     try:
@@ -110,6 +113,6 @@ async def create_alert(user_id, document_id, type_, message):
                 "type": type_,
                 "message": message
             }).execute()
-            print(f"Created alert: {type_} - {message}")
+            logger.info(f"Created alert: {type_} - {message}")
     except Exception as e:
-        print(f"Error creating alert: {e}")
+        logger.error(f"Error creating alert: {e}")

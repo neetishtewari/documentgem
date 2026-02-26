@@ -1,6 +1,9 @@
 from fastapi.concurrency import run_in_threadpool
 from app.services.supabase import supabase
 from app.services.ai_service import classify_document, generate_embedding, chunk_text
+from app.core.logging_config import get_logger
+
+logger = get_logger(__name__)
 
 def sanitize_text(text):
     """Removes null bytes from text to prevent PostgreSQL errors."""
@@ -33,7 +36,7 @@ async def process_document_ai(document_id: str, file_content: bytes, file_type: 
             
         await run_in_threadpool(update_db)
         
-        print(f"Document {document_id} classified as {result.get('category')}")
+        logger.info(f"Document {document_id} classified as {result.get('category')}")
 
         # 2. Generate Embeddings for RAG
         # We retrieve the text already extracted during classification
@@ -41,14 +44,14 @@ async def process_document_ai(document_id: str, file_content: bytes, file_type: 
         
         # If for some reason it's missing (e.g. error case), try to extract again or skip
         if not text_content:
-             print("No text content found in classification result. Skipping embeddings.")
+             logger.warning("No text content found in classification result. Skipping embeddings.")
         
         # Sanitize extracted text
         text_content = sanitize_text(text_content)
 
         if text_content:
             chunks = chunk_text(text_content)
-            print(f"Generated {len(chunks)} chunks.")
+            logger.debug(f"Generated {len(chunks)} chunks")
             for i, chunk in enumerate(chunks):
                 # Sanitize chunk just in case
                 chunk = sanitize_text(chunk)
@@ -67,20 +70,18 @@ async def process_document_ai(document_id: str, file_content: bytes, file_type: 
                             "user_id": user_id 
                         }).execute()
                     await run_in_threadpool(insert_embedding)
-                    print(f"Inserted embedding for chunk {i+1}/{len(chunks)}")
+                    logger.debug(f"Inserted embedding for chunk {i+1}/{len(chunks)}")
                     
-            print(f"Generated embeddings for document {document_id}")
+            logger.info(f"Generated embeddings for document {document_id}")
         else:
-            print("No text content extracted to embed.")
+            logger.warning("No text content extracted to embed")
 
     except Exception as e:
-        print(f"CRITICAL ERROR in Background AI Task for document {document_id}: {e}")
-        import traceback
-        traceback.print_exc()
+        logger.error(f"CRITICAL ERROR in Background AI Task for document {document_id}", exc_info=True)
         # Attempt to update status to 'Error'
         try:
             supabase.table("documents").update({
                 "category": "Error"
             }).eq("id", document_id).execute()
         except:
-            print("Failed to update document status to Error")
+            logger.error("Failed to update document status to Error")

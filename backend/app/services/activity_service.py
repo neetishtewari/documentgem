@@ -1,5 +1,8 @@
 from app.services.supabase import supabase
+from app.core.logging_config import get_logger
 import uuid
+
+logger = get_logger(__name__)
 
 async def log_activity(user_id: str, action: str, entity_type: str, entity_id: str = None, details: dict = {}):
     """
@@ -21,12 +24,7 @@ async def log_activity(user_id: str, action: str, entity_type: str, entity_id: s
             "details": details
         }
         
-        # Fire and forget - we don't want to block the main request if logging fails
-        # But since we are in async context, we can just await it or run it as a background task if passed.
-        # For simplicity in this service function, we'll just execute it.
-        # In a real production app, this might go to a queue.
-        
         supabase.table("activity_logs").insert(data).execute()
         
     except Exception as e:
-        print(f"Failed to log activity: {e}")
+        logger.warning(f"Failed to log activity: {e}")

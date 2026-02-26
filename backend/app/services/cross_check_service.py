@@ -1,14 +1,17 @@
 from app.services.supabase import supabase
 from app.services.ai_service import client
 from app.services.alerts_service import create_alert
+from app.core.logging_config import get_logger
 import json
+
+logger = get_logger(__name__)
 
 class CrossCheckService:
     async def check_document(self, doc_id: str):
         """
         Orchestrates cross-document checks for a newly processed document.
         """
-        print(f"Running cross-check for document {doc_id}...")
+        logger.info(f"Running cross-check for document {doc_id}")
         try:
             # 1. Fetch the document
             response = supabase.table("documents").select("*").eq("id", doc_id).execute()
@@ -27,7 +30,7 @@ class CrossCheckService:
                 await self.check_receipt_vs_policy(doc, metadata)
                 
         except Exception as e:
-            print(f"Error in cross-check service: {e}")
+            logger.error(f"Error in cross-check service: {e}")
 
     async def check_invoice_vs_po(self, invoice, metadata):
         """
@@ -37,7 +40,7 @@ class CrossCheckService:
         if not po_number:
             return
 
-        print(f"Looking for PO {po_number}...")
+        logger.debug(f"Looking for PO {po_number}")
         # Search for the PO document
         # We look for documents where metadata->po_number matches OR name contains PO number
         # Note: Supabase JSONB filtering can be tricky. 
@@ -56,7 +59,7 @@ class CrossCheckService:
                 break
         
         if matched_po:
-            print(f"Found related PO: {matched_po['name']}")
+            logger.info(f"Found related PO: {matched_po['name']}")
             await self.compare_documents(invoice, matched_po, "Invoice vs Purchase Order", 
                                          "Check for discrepancies in line items, quantities, and unit prices.")
 
@@ -78,7 +81,7 @@ class CrossCheckService:
         # Limit to top 3 for performance
         for policy in policies[:3]:
             if "expense" in policy.get("name", "").lower() or "travel" in policy.get("name", "").lower() or "policy" in policy.get("name", "").lower():
-                print(f"Checking receipt against policy: {policy['name']}")
+                logger.debug(f"Checking receipt against policy: {policy['name']}")
                 await self.compare_documents(receipt, policy, "Receipt vs Policy", 
                                              "Check if the receipt violates any expense limits or disallowed items in the policy.")
 
@@ -96,7 +99,7 @@ class CrossCheckService:
         
         if contracts:
             contract = contracts[0] # Take the first match
-            print(f"Found contract for {vendor}: {contract['name']}")
+            logger.info(f"Found contract for {vendor}: {contract['name']}")
             await self.compare_documents(invoice, contract, "Invoice vs Contract", 
                                          "Check if invoice terms (payment terms, rates) match the contract.")
 
@@ -135,13 +138,13 @@ class CrossCheckService:
             )
             
             result = response.choices[0].message.content.strip()
-            print(f"Comparison Result ({doc_b['name']}): {result[:100]}...")
+            logger.debug(f"Comparison Result ({doc_b['name']}): {result[:100]}...")
             
             if result != "OK" and "OK" not in result[:5]:
                 # Create Alert
                 await create_alert(doc_a["user_id"], doc_a["id"], "compliance_mismatch", f"{check_type}: {result}")
                 
         except Exception as e:
-            print(f"Error comparing documents: {e}")
+            logger.error(f"Error comparing documents: {e}")
 
 cross_check_service = CrossCheckService()

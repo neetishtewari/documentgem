@@ -5,14 +5,17 @@ from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseDownload
 from app.services.supabase import supabase
 from app.services.document_processor import process_document_ai
+from app.core.logging_config import get_logger
 import io
+
+logger = get_logger(__name__)
 
 def fetch_drive_files(integration_id: str, user_id: str):
     """
     Fetches new files from Google Drive for the given integration.
     Only fetches files modified since the last sync.
     """
-    print(f"--- Starting Drive Sync for Integration {integration_id} ---")
+    logger.info(f"Starting Drive sync for integration {integration_id}")
     sync_start_time = datetime.datetime.now(datetime.timezone.utc).isoformat()
     
     try:
@@ -21,7 +24,7 @@ def fetch_drive_files(integration_id: str, user_id: str):
         integration = response.data
         
         if not integration:
-            print(f"Integration {integration_id} not found.")
+            logger.warning(f"Integration {integration_id} not found")
             return
 
         # Update status to syncing
@@ -47,7 +50,7 @@ def fetch_drive_files(integration_id: str, user_id: str):
         else:
             start_date = last_synced_at
 
-        print(f"Fetching files modified after: {start_date}")
+        logger.debug(f"Fetching files modified after: {start_date}")
 
         # 3. List Files
         # Query for PDF, Images, Google Docs, and Word Docs
@@ -68,7 +71,7 @@ def fetch_drive_files(integration_id: str, user_id: str):
         ).execute()
         
         items = results.get('files', [])
-        print(f"Found {len(items)} files.")
+        logger.info(f"Found {len(items)} files")
 
         processed_count = 0
 
@@ -78,12 +81,12 @@ def fetch_drive_files(integration_id: str, user_id: str):
             mime_type = item['mimeType']
             modified_time = item['modifiedTime']
             
-            print(f"Processing file: {file_name} ({file_id})")
+            logger.debug(f"Processing file: {file_name} ({file_id})")
 
             # Check for duplicates using source_id in metadata
             existing = supabase.table("documents").select("id").contains("metadata", {"source_id": file_id}).execute()
             if existing.data:
-                print(f"Skipping duplicate file: {file_name} ({file_id})")
+                logger.debug(f"Skipping duplicate file: {file_name} ({file_id})")
                 continue
             
             # 4. Download File
@@ -117,7 +120,7 @@ def fetch_drive_files(integration_id: str, user_id: str):
                     file_options={"content-type": mime_type, "x-upsert": "true"}
                 )
             except Exception as e:
-                print(f"Error uploading to storage: {e}")
+                logger.error(f"Error uploading to storage: {e}")
                 # If it fails, it might be because it exists and upsert didn't work as expected, or other error
                 # Continue to next file
                 continue
@@ -151,7 +154,7 @@ def fetch_drive_files(integration_id: str, user_id: str):
                     # So we just need to call it.
                     process_document_ai(doc_id) 
                 except Exception as e:
-                    print(f"AI Processing failed for {doc_id}: {e}")
+                    logger.error(f"AI Processing failed for {doc_id}: {e}")
                 
                 processed_count += 1
 
@@ -169,7 +172,7 @@ def fetch_drive_files(integration_id: str, user_id: str):
                         }
                     }).execute()
                 except Exception as log_e:
-                    print(f"Failed to log activity for {doc_id}: {log_e}")
+                    logger.warning(f"Failed to log activity for {doc_id}: {log_e}")
 
         # 8. Update Integration Status
         supabase.table("user_integrations").update({
@@ -177,12 +180,10 @@ def fetch_drive_files(integration_id: str, user_id: str):
             "sync_status": "active"
         }).eq("id", integration_id).execute()
         
-        print(f"--- Drive Sync Completed. Processed {processed_count} files. ---")
+        logger.info(f"Drive sync completed. Processed {processed_count} files")
 
     except Exception as e:
-        print(f"CRITICAL ERROR in Drive Sync: {str(e)}")
-        import traceback
-        traceback.print_exc()
+        logger.error(f"CRITICAL Drive Sync error", exc_info=True)
         
         status = "error"
         error_msg = str(e)
@@ -208,7 +209,7 @@ def fetch_drive_files(integration_id: str, user_id: str):
                     "details": {"provider": "google_drive", "reason": str(e)}
                 }).execute()
             except Exception as log_e:
-                print(f"Failed to log activity: {log_e}")
+                logger.warning(f"Failed to log activity: {log_e}")
 
             # Create Alert
             try:
@@ -219,7 +220,7 @@ def fetch_drive_files(integration_id: str, user_id: str):
                     "is_read": False
                 }).execute()
             except Exception as alert_e:
-                print(f"Failed to create alert: {alert_e}")
+                logger.error(f"Failed to create alert: {alert_e}")
 
         # Update status
         supabase.table("user_integrations").update({"sync_status": status, "sync_message": error_msg}).eq("id", integration_id).execute()

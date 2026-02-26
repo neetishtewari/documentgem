@@ -7,12 +7,15 @@ from googleapiclient.discovery import build
 from fastapi.concurrency import run_in_threadpool
 from app.services.supabase import supabase
 from app.services.document_processor import process_document_ai
+from app.core.logging_config import get_logger
+
+logger = get_logger(__name__)
 
 async def fetch_gmail_attachments(integration_id: str, user_id: str):
     """
     Background task to fetch attachments from Gmail and process them.
     """
-    print(f"Starting Gmail sync for integration {integration_id}")
+    logger.info(f"Starting Gmail sync for integration {integration_id}")
     sync_start_time = datetime.datetime.now(datetime.timezone.utc).isoformat()
     
     try:
@@ -21,7 +24,7 @@ async def fetch_gmail_attachments(integration_id: str, user_id: str):
         integration = response.data
         
         if not integration:
-            print(f"Integration {integration_id} not found.")
+            logger.warning(f"Integration {integration_id} not found")
             return
 
         # Update status to Scanning
@@ -64,7 +67,7 @@ async def fetch_gmail_attachments(integration_id: str, user_id: str):
                 timestamp = int(last_sync_dt.timestamp())
                 date_query = f" after:{timestamp}"
             except Exception as e:
-                print(f"Error parsing last_synced_at: {e}")
+                logger.warning(f"Error parsing last_synced_at: {e}")
                 # Fallback to lookback days if date parse fails
                 start_date = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=lookback_days)
                 date_str = start_date.strftime("%Y/%m/%d")
@@ -76,14 +79,14 @@ async def fetch_gmail_attachments(integration_id: str, user_id: str):
             date_query = f" after:{date_str}"
             
         query = f"has:attachment{date_query}"
-        print(f"Gmail Query: {query}")
+        logger.debug(f"Gmail Query: {query}")
 
         # 5. List Messages
         results = service.users().messages().list(userId='me', q=query).execute()
         messages = results.get('messages', [])
         
         total_messages = len(messages)
-        print(f"Found {total_messages} messages with attachments.")
+        logger.info(f"Found {total_messages} messages with attachments")
         
         supabase.table("user_integrations").update({
             "sync_status": "syncing",
@@ -114,7 +117,7 @@ async def fetch_gmail_attachments(integration_id: str, user_id: str):
                         if mime_type not in ['application/pdf', 'image/jpeg', 'image/png']:
                             continue
                             
-                        print(f"Processing attachment: {filename}")
+                        logger.debug(f"Processing attachment: {filename}")
                         
                         # Get Attachment Data
                         attachment = service.users().messages().attachments().get(
@@ -127,7 +130,7 @@ async def fetch_gmail_attachments(integration_id: str, user_id: str):
                         # We use the message ID as the unique source identifier
                         existing = supabase.table("documents").select("id").contains("metadata", {"source_id": msg_id}).execute()
                         if existing.data:
-                            print(f"Skipping duplicate email: {msg_id}")
+                            logger.debug(f"Skipping duplicate email: {msg_id}")
                             continue
 
                         # Upload to Storage
@@ -178,7 +181,7 @@ async def fetch_gmail_attachments(integration_id: str, user_id: str):
                     }).eq("id", integration_id).execute()
                     
             except Exception as e:
-                print(f"Error processing message {msg_id}: {e}")
+                logger.error(f"Error processing message {msg_id}: {e}")
                 continue
 
         # 6. Finish
@@ -189,12 +192,10 @@ async def fetch_gmail_attachments(integration_id: str, user_id: str):
             "last_synced_at": sync_start_time
         }).eq("id", integration_id).execute()
         
-        print("Gmail sync completed.")
+        logger.info("Gmail sync completed")
 
     except Exception as e:
-        print(f"CRITICAL GMAIL SYNC ERROR: {e}")
-        import traceback
-        traceback.print_exc()
+        logger.error(f"CRITICAL GMAIL SYNC ERROR: {e}", exc_info=True)
         
         status = "error"
         error_msg = str(e)
@@ -221,7 +222,7 @@ async def fetch_gmail_attachments(integration_id: str, user_id: str):
                     "is_read": False
                 }).execute()
             except Exception as alert_e:
-                print(f"Failed to create alert: {alert_e}")
+                logger.error(f"Failed to create alert: {alert_e}")
 
         supabase.table("user_integrations").update({
             "sync_status": status,
@@ -234,7 +235,7 @@ async def sync_all_integrations():
     """
     Iterates through all active integrations and triggers sync.
     """
-    print("Running scheduled sync for all integrations...")
+    logger.info("Running scheduled sync for all integrations")
     try:
         # Fetch all google integrations
         response = supabase.table("user_integrations").select("*").eq("provider", "google").execute()
@@ -257,7 +258,7 @@ async def sync_all_integrations():
                 # It is blocking, so ideally run_in_threadpool.
                 await run_in_threadpool(fetch_drive_files, integration['id'], integration['user_id'])
             except Exception as e:
-                print(f"Drive sync failed for {integration['id']}: {e}")
+                logger.error(f"Drive sync failed for {integration['id']}: {e}")
             
     except Exception as e:
-        print(f"Error in sync_all_integrations: {e}")
+        logger.error(f"Error in sync_all_integrations: {e}")

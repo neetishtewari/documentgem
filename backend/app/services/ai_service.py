@@ -58,6 +58,12 @@ async def extract_text_from_document(file_content: bytes, file_type: str) -> str
                 max_tokens=4000
             )
             text_content = response.choices[0].message.content
+            logger.info("Vision extraction complete", extra={
+                "feature": "extract_text",
+                "tokens": response.usage.total_tokens if response.usage else 0,
+                "prompt_tokens": response.usage.prompt_tokens if response.usage else 0,
+                "completion_tokens": response.usage.completion_tokens if response.usage else 0,
+            })
             
     except Exception as e:
         logger.error(f"Text Extraction Error: {e}")
@@ -109,8 +115,14 @@ async def classify_document(file_content: bytes, file_type: str) -> dict:
         )
 
         result = json.loads(response.choices[0].message.content)
+        logger.info("Document classified", extra={
+            "feature": "classify",
+            "category": result.get("category"),
+            "tokens": response.usage.total_tokens if response.usage else 0,
+            "prompt_tokens": response.usage.prompt_tokens if response.usage else 0,
+            "completion_tokens": response.usage.completion_tokens if response.usage else 0,
+        })
         # Attach the full extracted text to the result so we don't have to re-extract it later
-        # (Optional, but good for efficiency if we change the flow)
         result["_extracted_text"] = text_content 
         return result
 
@@ -127,6 +139,10 @@ async def generate_embedding(text: str) -> list[float]:
             model="text-embedding-3-small",
             input=text
         )
+        logger.debug("Embedding generated", extra={
+            "feature": "embed",
+            "tokens": response.usage.total_tokens if response.usage else 0,
+        })
         return response.data[0].embedding
     except Exception as e:
         logger.error(f"Embedding Error: {e}")
