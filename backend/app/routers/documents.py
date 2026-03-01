@@ -32,7 +32,11 @@ async def upload_document(
     user = Depends(get_current_user)
 ):
     try:
-        # 0. Validate file type
+        # 0a. Check document quota
+        from app.core.quotas import check_document_quota
+        await check_document_quota(user.id)
+
+        # 0b. Validate file type
         if file.content_type not in ALLOWED_CONTENT_TYPES:
             raise HTTPException(
                 status_code=400,

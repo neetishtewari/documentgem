@@ -22,6 +22,11 @@ class Settings:
     RATE_LIMIT_PER_MINUTE: str = os.getenv("RATE_LIMIT_PER_MINUTE", "60/minute")
     RATE_LIMIT_CHAT_PER_MINUTE: str = os.getenv("RATE_LIMIT_CHAT_PER_MINUTE", "20/minute")
 
+    # User Quotas
+    MAX_DOCUMENTS_PER_USER: int = int(os.getenv("MAX_DOCUMENTS_PER_USER", "500"))
+    MAX_STORAGE_PER_USER_MB: int = int(os.getenv("MAX_STORAGE_PER_USER_MB", "500"))
+    MAX_CHAT_MESSAGES_PER_DAY: int = int(os.getenv("MAX_CHAT_MESSAGES_PER_DAY", "100"))
+
     @property
     def is_production(self) -> bool:
         return self.ENVIRONMENT == "production"

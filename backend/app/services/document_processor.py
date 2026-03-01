@@ -26,6 +26,25 @@ async def process_document_ai(document_id: str, file_content: bytes, file_type: 
         # Sanitize result
         result = sanitize_text(result)
 
+        # AI Confidence Threshold — override low-confidence classifications
+        confidence = result.get("confidence", 0)
+        if isinstance(confidence, str):
+            try:
+                confidence = float(confidence)
+            except ValueError:
+                confidence = 0.0
+        if confidence < 0.7:
+            original_category = result.get("category", "Unknown")
+            logger.warning(
+                "Low-confidence classification overridden to 'Needs Review'",
+                extra={
+                    "document_id": document_id,
+                    "original_category": original_category,
+                    "confidence": confidence,
+                },
+            )
+            result["category"] = "Needs Review"
+
         # Blocking DB update -> Thread Pool
         def update_db():
             supabase.table("documents").update({

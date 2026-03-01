@@ -101,6 +101,10 @@ async def get_session_messages(session_id: str, user = Depends(get_current_user)
 @router.post("/sessions/{session_id}/messages")
 async def send_message(session_id: str, request: SendMessageRequest, user = Depends(get_current_user)):
     try:
+        # 0. Check chat quota
+        from app.core.quotas import check_chat_quota
+        await check_chat_quota(user.id)
+
         # 1. Verify session ownership
         session = supabase.table("chat_sessions").select("id, title").eq("id", session_id).eq("user_id", user.id).single().execute()
         if not session.data:
